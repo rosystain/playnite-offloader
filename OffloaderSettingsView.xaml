@@ -18,11 +18,27 @@
             <CheckBox Content="游戏退出后自动推送到远端（默认关闭，建议保持关闭，手动推送更安全）"
                       IsChecked="{Binding Settings.EnableAutoPushOnStopped}" Margin="0,12,0,0"/>
 
-            <TextBlock Text="高级：robocopy 参数（一般无需修改，推送永不删除远端，不要加 /MIR）:" FontWeight="Bold" Margin="0,12,0,0"/>
-            <TextBlock Text="拉取参数（远端→本地）:" Margin="0,6,0,0"/>
-            <TextBox Text="{Binding Settings.PullArgs, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas"/>
-            <TextBlock Text="推送参数（本地→远端）:" Margin="0,6,0,0"/>
-            <TextBox Text="{Binding Settings.PushArgs, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas"/>
+            <TextBlock Text="同步速度（高/中/低只调多线程数，前台全速、后台自动限速让行，推送永不删除远端）:" FontWeight="Bold" Margin="0,12,0,0" TextWrapping="Wrap"/>
+            <TextBlock Text="拉取速度（远端→本地，恢复游戏时用，默认高）:" Margin="0,6,0,0"/>
+            <ComboBox SelectedIndex="{Binding Settings.PullSpeed, Mode=TwoWay}" Margin="0,4,0,0">
+                <ComboBoxItem Content="低 - 限速，适合机械盘 / 老 NAS"/>
+                <ComboBoxItem Content="中 - 均衡，适合一般内网"/>
+                <ComboBoxItem Content="高 - 全速，适合 SSD / 千兆内网"/>
+            </ComboBox>
+            <TextBlock Text="推送速度（本地→远端：启用同步后自动后台推送；手动“立即推送”与释放终推走前台全速，退出自动推走后台限速）:" Margin="0,6,0,0" TextWrapping="Wrap"/>
+            <ComboBox SelectedIndex="{Binding Settings.PushSpeed, Mode=TwoWay}" Margin="0,4,0,0">
+                <ComboBoxItem Content="低 - 限速，适合机械盘 / 老 NAS"/>
+                <ComboBoxItem Content="中 - 均衡，适合一般内网"/>
+                <ComboBoxItem Content="高 - 全速，适合 SSD / 千兆内网"/>
+            </ComboBox>
+
+            <TextBlock Text="已启用清单（远端存在 GameId 目录即算启用，空目录也算，靠下次推送自愈）:" FontWeight="Bold" Margin="0,12,0,0" TextWrapping="Wrap"/>
+            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <Button Content="管理已启用清单…" Width="150" Click="OpenEnrolled_Click"/>
+                <Button Content="刷新状态" Width="80" Margin="6,0,0,0" Click="RefreshEnrolled_Click"/>
+            </StackPanel>
+            <TextBlock Text="{Binding EnrolledStatus}" Opacity="0.7" Margin="0,4,0,0" TextWrapping="Wrap"/>
+            <TextBlock Text="移除 = 删除远端整个 GameId 目录并清状态（含库里已删游戏的孤儿记录），不可恢复；有后台/前台任务在跑的会被拒绝。" TextWrapping="Wrap" Opacity="0.7" Margin="0,4,0,0"/>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

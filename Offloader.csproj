@@ -52,10 +52,15 @@
   <ItemGroup>
     <Compile Include="Offloader.cs" />
     <Compile Include="OffloaderInstallController.cs" />
+    <Compile Include="Models\EnrolledGameEntry.cs" />
     <Compile Include="Models\GameSyncState.cs" />
     <Compile Include="Models\SyncStateStore.cs" />
+    <Compile Include="Services\RobocopyPresets.cs" />
     <Compile Include="Services\RobocopySyncService.cs" />
     <Compile Include="OffloaderSettings.cs" />
+    <Compile Include="EnrolledGamesView.xaml.cs">
+      <DependentUpon>EnrolledGamesView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="OffloaderSettingsView.xaml.cs">
       <DependentUpon>OffloaderSettingsView.xaml</DependentUpon>
     </Compile>
@@ -76,6 +81,10 @@
     <Page Include="App.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="EnrolledGamesView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="OffloaderSettingsView.xaml">
       <SubType>Designer</SubType>

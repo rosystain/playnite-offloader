@@ -38,13 +38,18 @@ namespace Offloader.Models
             }
         }
 
-        public bool IsEnabled(Guid gameId)
+        public List<GameSyncState> GetAll()
         {
-            var s = Get(gameId);
-            return s != null && s.Enabled;
+            lock (sync)
+            {
+                return states.Values.ToList();
+            }
         }
 
-        public void SetEnabled(Guid gameId, string localPath)
+        /// <summary>
+        /// 确保条目存在（启用/推送时写快照用）。是否启用以远端目录存在为准，本方法只维护快照。
+        /// </summary>
+        public void EnsureEntry(Guid gameId, string localPath)
         {
             lock (sync)
             {
@@ -53,7 +58,6 @@ namespace Offloader.Models
                     s = new GameSyncState { GameId = gameId };
                     states[gameId] = s;
                 }
-                s.Enabled = true;
                 if (!string.IsNullOrWhiteSpace(localPath))
                 {
                     s.LocalPath = localPath;
@@ -62,13 +66,12 @@ namespace Offloader.Models
             }
         }
 
-        public void SetDisabled(Guid gameId)
+        public void Remove(Guid gameId)
         {
             lock (sync)
             {
-                if (states.TryGetValue(gameId, out var s))
+                if (states.Remove(gameId))
                 {
-                    s.Enabled = false;
                     SaveLocked();
                 }
             }
@@ -78,11 +81,17 @@ namespace Offloader.Models
         {
             lock (sync)
             {
-                if (states.TryGetValue(gameId, out var s) && !string.IsNullOrWhiteSpace(localPath))
+                if (string.IsNullOrWhiteSpace(localPath))
                 {
-                    s.LocalPath = localPath;
-                    SaveLocked();
+                    return;
                 }
+                if (!states.TryGetValue(gameId, out var s))
+                {
+                    s = new GameSyncState { GameId = gameId };
+                    states[gameId] = s;
+                }
+                s.LocalPath = localPath;
+                SaveLocked();
             }
         }
 
@@ -90,11 +99,13 @@ namespace Offloader.Models
         {
             lock (sync)
             {
-                if (states.TryGetValue(gameId, out var s))
+                if (!states.TryGetValue(gameId, out var s))
                 {
-                    s.LastPushUtc = DateTime.UtcNow;
-                    SaveLocked();
+                    s = new GameSyncState { GameId = gameId };
+                    states[gameId] = s;
                 }
+                s.LastPushUtc = DateTime.UtcNow;
+                SaveLocked();
             }
         }
 

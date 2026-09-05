@@ -25,6 +25,10 @@ namespace Offloader
         private readonly SyncStateStore store;
         private readonly RobocopySyncService sync = new RobocopySyncService();
         private readonly ConcurrentDictionary<Guid, SemaphoreSlim> gameLocks = new ConcurrentDictionary<Guid, SemaphoreSlim>();
+        // 正在跑后台推送的游戏。GetGameMenuItems 每次打开菜单都会重算，据此隐藏前台推送入口以防冲突。
+        private readonly ConcurrentDictionary<Guid, byte> bgRunning = new ConcurrentDictionary<Guid, byte>();
+        // 后台推送的取消源。取消只发信号、不释放，所有权归跑任务的那一端（finally 里移除+Dispose）。
+        private readonly ConcurrentDictionary<Guid, CancellationTokenSource> bgCts = new ConcurrentDictionary<Guid, CancellationTokenSource>();
 
         public override Guid Id { get; } = Guid.Parse("5180751b-c8af-41cf-b9de-76253984e71c");
 
@@ -32,7 +36,6 @@ namespace Offloader
         {
             settings = new OffloaderSettingsViewModel(this);
             store = new SyncStateStore(GetPluginUserDataPath());
-            ApplyArgsFromSettings();
             Properties = new GenericPluginProperties
             {
                 HasSettings = true
@@ -50,14 +53,14 @@ namespace Offloader
                 return Enumerable.Empty<GameMenuItem>();
             }
 
-            var anyNotEnabled = games.Any(g => !store.IsEnabled(g.Id));
-            var anyEnabled = games.Any(g => store.IsEnabled(g.Id));
-            var anyPushable = games.Any(g => store.IsEnabled(g.Id) && g.IsInstalled && Directory.Exists(SafeLocalPath(g)));
-            var anyOffloadable = games.Any(g => store.IsEnabled(g.Id) && g.IsInstalled && !string.IsNullOrWhiteSpace(SafeLocalPath(g)));
-            var anyRemote = games.Any(g => store.IsEnabled(g.Id) && HasRemoteData(g));
+            var anyNotEnrolled = games.Any(g => !IsEnrolled(g));
+            var anyPushable = games.Any(g => IsEnrolled(g) && g.IsInstalled && Directory.Exists(SafeLocalPath(g)) && !bgRunning.ContainsKey(g.Id));
+            var anyBgRunning = games.Any(g => bgRunning.ContainsKey(g.Id));
+            var anyOffloadable = games.Any(g => IsEnrolled(g) && g.IsInstalled && !string.IsNullOrWhiteSpace(SafeLocalPath(g)));
+            var anyRemote = games.Any(g => IsEnrolled(g));
 
             var items = new List<GameMenuItem>();
-            if (anyNotEnabled)
+            if (anyNotEnrolled)
             {
                 items.Add(new GameMenuItem
                 {
@@ -73,6 +76,15 @@ namespace Offloader
                     Description = "Offloader：立即推送到远端",
                     MenuSection = MenuSection,
                     Action = a => PushGamesWithProgress(a.Games)
+                });
+            }
+            if (anyBgRunning)
+            {
+                items.Add(new GameMenuItem
+                {
+                    Description = "Offloader：取消后台推送",
+                    MenuSection = MenuSection,
+                    Action = a => CancelBackgroundPushes(a.Games)
                 });
             }
             if (anyOffloadable)
@@ -93,26 +105,17 @@ namespace Offloader
                     Action = a => OpenRemoteDirs(a.Games)
                 });
             }
-            if (anyEnabled)
-            {
-                items.Add(new GameMenuItem
-                {
-                    Description = "Offloader：禁用同步",
-                    MenuSection = MenuSection,
-                    Action = a => DisableGames(a.Games)
-                });
-            }
             return items;
         }
 
         public override IEnumerable<InstallController> GetInstallActions(GetInstallActionsArgs args)
         {
             var game = args?.Game;
-            if (game == null || store.IsEnabled(game.Id) == false || game.IsInstalled)
+            if (game == null || game.IsInstalled)
             {
                 return Enumerable.Empty<InstallController>();
             }
-            // 远端无数据时不提供恢复入口，避免用户误点
+            // 远端无数据时不提供恢复入口，避免用户误点（空目录不算有数据）
             if (!HasRemoteData(game))
             {
                 return Enumerable.Empty<InstallController>();
@@ -125,7 +128,7 @@ namespace Offloader
             try
             {
                 var game = args?.Game;
-                if (game == null || !CurrentSettings.EnableAutoPushOnStopped || !store.IsEnabled(game.Id) || !game.IsInstalled)
+                if (game == null || !CurrentSettings.EnableAutoPushOnStopped || !IsEnrolled(game) || !game.IsInstalled)
                 {
                     return;
                 }
@@ -144,11 +147,12 @@ namespace Offloader
                         logger.Info($"Offloader: {gameName} 已有同步在进行，跳过退出后自动推送。");
                         return;
                     }
+                    bgRunning[gameId] = 0;
                     try
                     {
-                        ApplyArgsFromSettings();
                         var remote = SyncStateStore.GetRemotePath(CurrentSettings.RemoteRoot, gameId);
-                        var res = sync.Push(local, remote, CancellationToken.None, true);
+                        var bgPushArgs = RobocopyPresets.GetBackgroundPushArgs(CurrentSettings.PushSpeed);
+                        var res = sync.Push(local, remote, CancellationToken.None, bgPushArgs, true);
                         if (res.Success)
                         {
                             store.UpdateLastPush(gameId);
@@ -157,7 +161,7 @@ namespace Offloader
                         else
                         {
                             logger.Error($"Offloader: {gameName} 退出后自动推送失败，退出码 {res.ExitCode}。");
-                            PlayniteApi.Notifications.Add(gameId + "-autopush", $"Offloader：{gameName} 自动推送失败（robocopy 退出码 {res.ExitCode}），请手动推送。", NotificationType.Error);
+                            PlayniteApi.Notifications.Add(gameId + "-autopush", $"Offloader：{gameName} 自动推送失败（robocopy 退出码 {res.ExitCode}），请手动推送。{OutputTail(res.Output)}", NotificationType.Error);
                         }
                     }
                     catch (Exception ex)
@@ -166,6 +170,7 @@ namespace Offloader
                     }
                     finally
                     {
+                        bgRunning.TryRemove(gameId, out _);
                         gate.Release();
                     }
                 });
@@ -184,19 +189,13 @@ namespace Offloader
             {
                 return;
             }
-            foreach (var g in games.Where(g => g != null && !store.IsEnabled(g.Id)))
+            foreach (var g in games.Where(g => g != null && !IsEnrolled(g)))
             {
-                store.SetEnabled(g.Id, g.InstallDirectory ?? string.Empty);
+                store.EnsureEntry(g.Id, g.InstallDirectory ?? string.Empty);
             }
-            PlayniteApi.Notifications.Add("offloader-enabled", $"Offloader：已启用 {games.Count} 个游戏的同步。", NotificationType.Info);
-        }
-
-        private void DisableGames(List<Game> games)
-        {
-            foreach (var g in games.Where(g => g != null && store.IsEnabled(g.Id)))
-            {
-                store.SetDisabled(g.Id);
-            }
+            PlayniteApi.Notifications.Add("offloader-enabled", $"Offloader：已启用 {games.Count} 个游戏的同步，后台推送已开始。", NotificationType.Info);
+            // 启用即后台推送：已安装且本地目录存在的直接开始传，期间前台推送入口自动隐藏
+            PushGamesInBackground(games);
         }
 
         private void PushGamesWithProgress(List<Game> games)
@@ -205,13 +204,13 @@ namespace Offloader
             {
                 return;
             }
-            var targets = games.Where(g => g != null && store.IsEnabled(g.Id) && g.IsInstalled && Directory.Exists(SafeLocalPath(g))).ToList();
+            var targets = games.Where(g => g != null && IsEnrolled(g) && g.IsInstalled && Directory.Exists(SafeLocalPath(g))).ToList();
             if (targets.Count == 0)
             {
-                PlayniteApi.Dialogs.ShowErrorMessage("没有可推送的游戏：需已启用同步、已安装且本地目录存在。");
+                PlayniteApi.Dialogs.ShowErrorMessage("没有可推送的游戏：需已启用同步（远端存在 GameId 目录）、已安装且本地目录存在。");
                 return;
             }
-            ApplyArgsFromSettings();
+            var fgArgs = RobocopyPresets.GetForegroundPushArgs(CurrentSettings.PushSpeed);
             PlayniteApi.Dialogs.ActivateGlobalProgress(async progress =>
             {
                 foreach (var g in targets)
@@ -222,15 +221,19 @@ namespace Offloader
                         break;
                     }
                     var gate = gameLocks.GetOrAdd(g.Id, _ => new SemaphoreSlim(1, 1));
-                    await gate.WaitAsync(progress.CancelToken);
+                    if (!gate.Wait(0))
+                    {
+                        PlayniteApi.Notifications.Add(g.Id + "-push-busy", $"Offloader：{g.Name} 已有同步在进行，已跳过（等后台任务完成后可再推）。", NotificationType.Error);
+                        continue;
+                    }
                     try
                     {
                         var local = SafeLocalPath(g);
                         var remote = SyncStateStore.GetRemotePath(CurrentSettings.RemoteRoot, g.Id);
-                        var res = await Task.Run(() => sync.Push(local, remote, progress.CancelToken, true, t => progress.Text = $"Offloader 推送中：{g.Name}\n{t}"));
+                        var res = await Task.Run(() => sync.Push(local, remote, progress.CancelToken, fgArgs, false, t => progress.Text = $"Offloader 推送中：{g.Name}\n{t}"));
                         if (!res.Success)
                         {
-                            throw new InvalidOperationException($"robocopy 退出码 {res.ExitCode}（>=8 为失败）。");
+                            throw new InvalidOperationException($"robocopy 退出码 {res.ExitCode}（>=8 为失败）。{OutputTail(res.Output)}");
                         }
                         store.UpdateLastPush(g.Id);
                         store.UpdateLocalPath(g.Id, local);
@@ -258,7 +261,7 @@ namespace Offloader
             {
                 return;
             }
-            var targets = games.Where(g => g != null && store.IsEnabled(g.Id) && g.IsInstalled && !string.IsNullOrWhiteSpace(SafeLocalPath(g))).ToList();
+            var targets = games.Where(g => g != null && IsEnrolled(g) && g.IsInstalled && !string.IsNullOrWhiteSpace(SafeLocalPath(g))).ToList();
             if (targets.Count == 0)
             {
                 return;
@@ -272,7 +275,7 @@ namespace Offloader
             {
                 return;
             }
-            ApplyArgsFromSettings();
+            var offloadArgs = RobocopyPresets.GetForegroundPushArgs(CurrentSettings.PushSpeed);
             PlayniteApi.Dialogs.ActivateGlobalProgress(async progress =>
             {
                 foreach (var g in targets)
@@ -282,12 +285,16 @@ namespace Offloader
                         break;
                     }
                     var gate = gameLocks.GetOrAdd(g.Id, _ => new SemaphoreSlim(1, 1));
-                    await gate.WaitAsync(progress.CancelToken);
+                    if (!gate.Wait(0))
+                    {
+                        PlayniteApi.Notifications.Add(g.Id + "-offload-busy", $"Offloader：{g.Name} 已有同步在进行，已跳过释放。", NotificationType.Error);
+                        continue;
+                    }
                     try
                     {
                         progress.Text = $"Offloader 释放中（终推）：{g.Name}";
                         var local = SafeLocalPath(g);
-                        // 五重门：启用 / 路径非空 / 本地是目录 / 远端根合法 / 远端校验通过才删
+                        // 四重门：远端根合法 / 本地路径非空 / 本地是目录则终推 / 远端校验通过才删（是否启用已由 IsEnrolled 前置）
                         if (string.IsNullOrWhiteSpace(local))
                         {
                             throw new InvalidOperationException("本地路径为空，为防止误删已中止。");
@@ -295,10 +302,10 @@ namespace Offloader
                         var remote = SyncStateStore.GetRemotePath(CurrentSettings.RemoteRoot, g.Id);
                         if (Directory.Exists(local))
                         {
-                            var res = await Task.Run(() => sync.Push(local, remote, progress.CancelToken, false, t => progress.Text = $"Offloader 释放中（终推）：{g.Name}\n{t}"));
+                            var res = await Task.Run(() => sync.Push(local, remote, progress.CancelToken, offloadArgs, false, t => progress.Text = $"Offloader 释放中（终推）：{g.Name}\n{t}"));
                             if (!res.Success)
                             {
-                                throw new InvalidOperationException($"最终推送失败，robocopy 退出码 {res.ExitCode}，未删除本地。");
+                                throw new InvalidOperationException($"最终推送失败，robocopy 退出码 {res.ExitCode}，未删除本地。{OutputTail(res.Output)}");
                             }
                         }
                         if (!sync.RemoteHasData(remote))
@@ -346,7 +353,7 @@ namespace Offloader
             {
                 return;
             }
-            foreach (var g in games.Where(g => g != null && store.IsEnabled(g.Id)))
+            foreach (var g in games.Where(g => g != null && IsEnrolled(g)))
             {
                 var remote = SyncStateStore.GetRemotePath(CurrentSettings.RemoteRoot, g.Id);
                 try
@@ -377,15 +384,11 @@ namespace Offloader
             {
                 throw new ArgumentNullException(nameof(game));
             }
-            if (!store.IsEnabled(game.Id))
-            {
-                throw new InvalidOperationException("该游戏未启用 Offloader 同步。");
-            }
             if (!RequireRemoteRoot())
             {
                 throw new InvalidOperationException("未设置远端仓库目录。");
             }
-            ApplyArgsFromSettings();
+            var pullArgs = RobocopyPresets.GetPullArgs(CurrentSettings.PullSpeed);
             var remote = SyncStateStore.GetRemotePath(CurrentSettings.RemoteRoot, game.Id);
             if (!sync.RemoteHasData(remote))
             {
@@ -433,7 +436,7 @@ namespace Offloader
             try
             {
                 var token = progress?.CancelToken ?? CancellationToken.None;
-                var res = sync.Pull(remote, target, token, t =>
+                var res = sync.Pull(remote, target, token, pullArgs, t =>
                 {
                     if (progress != null)
                     {
@@ -442,7 +445,7 @@ namespace Offloader
                 });
                 if (!res.Success)
                 {
-                    throw new InvalidOperationException($"robocopy 退出码 {res.ExitCode}（>=8 为失败）。");
+                    throw new InvalidOperationException($"robocopy 退出码 {res.ExitCode}（>=8 为失败）。{OutputTail(res.Output)}");
                 }
                 var toUpdate = PlayniteApi.Database.Games.Get(game.Id) ?? game;
                 toUpdate.InstallDirectory = target;
@@ -461,10 +464,104 @@ namespace Offloader
 
         #region 辅助
 
-        private void ApplyArgsFromSettings()
+        private void PushGamesInBackground(List<Game> games)
         {
-            sync.PullArgs = string.IsNullOrWhiteSpace(CurrentSettings.PullArgs) ? "/E /R:2 /W:5 /MT:16" : CurrentSettings.PullArgs.Trim();
-            sync.PushArgs = string.IsNullOrWhiteSpace(CurrentSettings.PushArgs) ? "/E /XO /IPG:50 /R:1 /W:3 /NP /NDL" : CurrentSettings.PushArgs.Trim();
+            if (!RequireRemoteRoot())
+            {
+                return;
+            }
+            var targets = games.Where(g => g != null && g.IsInstalled && Directory.Exists(SafeLocalPath(g))).ToList();
+            if (targets.Count == 0)
+            {
+                PlayniteApi.Dialogs.ShowErrorMessage("没有可推送的游戏：需已安装且本地目录存在。");
+                return;
+            }
+            var bgArgs = RobocopyPresets.GetBackgroundPushArgs(CurrentSettings.PushSpeed);
+            foreach (var g in targets)
+            {
+                var gate = gameLocks.GetOrAdd(g.Id, _ => new SemaphoreSlim(1, 1));
+                if (!gate.Wait(0))
+                {
+                    PlayniteApi.Notifications.Add(g.Id + "-push-bg-busy", $"Offloader：{g.Name} 已有同步在进行，已跳过后台推送。", NotificationType.Error);
+                    continue;
+                }
+                var gameId = g.Id;
+                var gameName = g.Name;
+                bgRunning[gameId] = 0;
+                var cts = new CancellationTokenSource();
+                bgCts[gameId] = cts;
+                var local = SafeLocalPath(g);
+                var remote = SyncStateStore.GetRemotePath(CurrentSettings.RemoteRoot, gameId);
+                PlayniteApi.Notifications.Add(gameId + "-push-bg", $"Offloader：{gameName} 正在后台推送…", NotificationType.Info);
+                Task.Run(() =>
+                {
+                    try
+                    {
+                        var res = sync.Push(local, remote, cts.Token, bgArgs, true);
+                        if (res.Success)
+                        {
+                            store.UpdateLastPush(gameId);
+                            store.UpdateLocalPath(gameId, local);
+                            PlayniteApi.Notifications.Remove(gameId + "-push-bg");
+                            PlayniteApi.Notifications.Add(gameId + "-push-bg-done", $"Offloader：{gameName} 后台推送完成。", NotificationType.Info);
+                            logger.Info($"Offloader: {gameName} 后台推送成功。");
+                        }
+                        else
+                        {
+                            PlayniteApi.Notifications.Add(gameId + "-push-bg", $"Offloader：{gameName} 后台推送失败（robocopy 退出码 {res.ExitCode}）。{OutputTail(res.Output)}", NotificationType.Error);
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        PlayniteApi.Notifications.Remove(gameId + "-push-bg");
+                        PlayniteApi.Notifications.Add(gameId + "-push-bg-cancelled", $"Offloader：{gameName} 后台推送已取消，可改用立即推送。", NotificationType.Info);
+                        logger.Info($"Offloader: {gameName} 后台推送已取消。");
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, $"Offloader: 后台推送失败：{gameName}");
+                        PlayniteApi.Notifications.Add(gameId + "-push-bg", $"Offloader：{gameName} 后台推送失败：{ex.Message}", NotificationType.Error);
+                    }
+                    finally
+                    {
+                        bgRunning.TryRemove(gameId, out _);
+                        if (bgCts.TryRemove(gameId, out var toDispose))
+                        {
+                            try
+                            {
+                                toDispose.Dispose();
+                            }
+                            catch
+                            {
+                            }
+                        }
+                        gate.Release();
+                    }
+                });
+            }
+        }
+
+        private void CancelBackgroundPushes(List<Game> games)
+        {
+            var count = 0;
+            foreach (var g in games.Where(g => g != null))
+            {
+                if (bgCts.TryGetValue(g.Id, out var cts))
+                {
+                    try
+                    {
+                        cts.Cancel();
+                        count++;
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+            if (count > 0)
+            {
+                PlayniteApi.Notifications.Add("offloader-bg-cancel", $"Offloader：已取消 {count} 个后台推送，远端保留已传部分，下次推送断点续传。", NotificationType.Info);
+            }
         }
 
         private bool RequireRemoteRoot()
@@ -501,6 +598,30 @@ namespace Offloader
             }
         }
 
+        /// <summary>
+        /// 是否已启用：远端存在 GameId 目录即算（空目录也算，靠下次推送自愈）。
+        /// </summary>
+        private bool IsEnrolled(Game game)
+        {
+            try
+            {
+                if (game == null)
+                {
+                    return false;
+                }
+                var root = CurrentSettings.RemoteRoot?.Trim();
+                if (string.IsNullOrEmpty(root))
+                {
+                    return false;
+                }
+                return sync.RemoteExists(SyncStateStore.GetRemotePath(root, game.Id));
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private bool HasRemoteData(Game game)
         {
             try
@@ -518,6 +639,146 @@ namespace Offloader
             }
         }
 
+        // robocopy 失败时把输出尾巴塞进通知，否则只有退出码（如 16）根本看不出原因
+        private static string OutputTail(string output)
+        {
+            if (string.IsNullOrWhiteSpace(output))
+            {
+                return string.Empty;
+            }
+            var t = output.Trim();
+            const int max = 400;
+            if (t.Length > max)
+            {
+                t = "…" + t.Substring(t.Length - max + 1);
+            }
+            return "\n" + t;
+        }
+
+        #region 设置页已启用清单
+
+        internal List<EnrolledGameEntry> GetEnrolledEntries(out string status)
+        {
+            var list = new List<EnrolledGameEntry>();
+            var root = CurrentSettings.RemoteRoot?.Trim();
+            if (string.IsNullOrEmpty(root))
+            {
+                status = "未设置远端仓库目录。";
+                return list;
+            }
+            List<Guid> ids = new List<Guid>();
+            string scanError = null;
+            try
+            {
+                if (!Directory.Exists(root))
+                {
+                    scanError = "远端仓库目录不存在或不可达：" + root;
+                }
+                else
+                {
+                    foreach (var dir in Directory.EnumerateDirectories(root))
+                    {
+                        Guid id;
+                        try
+                        {
+                            if (Guid.TryParse(Path.GetFileName(dir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)), out id))
+                            {
+                                ids.Add(id);
+                            }
+                        }
+                        catch
+                        {
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                scanError = "远端仓库不可达：" + ex.Message;
+            }
+            if (scanError != null)
+            {
+                // 远端不可达时回退到本地快照，避免清单全空误导
+                foreach (var s in store.GetAll())
+                {
+                    if (!ids.Contains(s.GameId))
+                    {
+                        ids.Add(s.GameId);
+                    }
+                }
+            }
+            foreach (var id in ids.Distinct())
+            {
+                var remote = SyncStateStore.GetRemotePath(root, id);
+                Game dbGame = null;
+                try
+                {
+                    dbGame = PlayniteApi.Database.Games.Get(id);
+                }
+                catch
+                {
+                }
+                var snap = store.Get(id);
+                var local = (dbGame?.InstallDirectory ?? snap?.LocalPath ?? string.Empty).Trim();
+                var hasData = sync.RemoteHasData(remote);
+                var exists = sync.RemoteExists(remote);
+                list.Add(new EnrolledGameEntry
+                {
+                    GameId = id,
+                    DisplayName = dbGame != null ? dbGame.Name : "未知游戏 (" + id + ")",
+                    IsOrphan = dbGame == null,
+                    RemoteState = !exists ? "缺失" : (hasData ? "有数据" : "空目录"),
+                    LastPushText = snap?.LastPushUtc == null ? "—" : snap.LastPushUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm"),
+                    LocalPath = local
+                });
+            }
+            list.Sort((a, b) => string.Compare(a.DisplayName, b.DisplayName, StringComparison.OrdinalIgnoreCase));
+            status = scanError ?? ("共 " + list.Count + " 条已启用记录。");
+            return list;
+        }
+
+        internal bool RemoveEnrolled(Guid gameId, out string error)
+        {
+            error = null;
+            if (!RequireRemoteRoot())
+            {
+                error = "未设置远端仓库目录。";
+                return false;
+            }
+            if (bgRunning.ContainsKey(gameId))
+            {
+                error = "该游戏有后台推送在进行，请先取消后再移除。";
+                return false;
+            }
+            var gate = gameLocks.GetOrAdd(gameId, _ => new SemaphoreSlim(1, 1));
+            if (!gate.Wait(0))
+            {
+                error = "该游戏有同步在进行，请稍后再试。";
+                return false;
+            }
+            try
+            {
+                var remote = SyncStateStore.GetRemotePath(CurrentSettings.RemoteRoot, gameId);
+                if (Directory.Exists(remote))
+                {
+                    Directory.Delete(remote, true);
+                }
+                store.Remove(gameId);
+                logger.Info("Offloader: 已移除远端记录 " + remote);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Offloader: 移除远端记录失败。");
+                error = ex.Message;
+                return false;
+            }
+            finally
+            {
+                gate.Release();
+            }
+        }
+
         internal void ReportError(string message)
         {
             try
@@ -529,6 +790,8 @@ namespace Offloader
                 logger.Error(ex, "Offloader: 显示错误对话框失败。");
             }
         }
+
+        #endregion
 
         #endregion
 
