@@ -9,7 +9,7 @@ Playnite 6 通用插件（GenericPlugin），给“不舍得删游戏但 SSD 吃
 - 按游戏**手动启用**同步，本地安装目录 → 远端仓库（HDD/NAS）。
 - 通关/长期不玩后可**释放本地**：整个删除本地目录，远端保留唯一副本，游戏标记为未安装。
 - 想玩时通过 Playnite 的**安装入口恢复**（从远端拉回）。
-- 默认**无任何自动同步**（防本地损坏污染远端），只有一个 opt-in 开关（退出后自动推，默认关）。
+- 无任何自动同步（防本地损坏污染远端）：所有写入远端都必须经右键菜单手动触发；`OnGameStopped` 自动推已于未上线前移除。
 
 前身是 `example/playnite-nas-sync/` 里的两个 PowerShell 脚本（启动前拉取 / 启动后推送），行为（robocopy 参数、退出码判定）照抄它们。
 
@@ -20,7 +20,7 @@ Playnite 6 通用插件（GenericPlugin），给“不舍得删游戏但 SSD 吃
 | `Offloader.cs` | 插件主体：右键菜单、安装动作、释放/推送/恢复编排、事件 |
 | `OffloaderInstallController.cs` | 自定义安装控制器（未安装游戏的“从 Offloader 仓库恢复”） |
 | `OffloaderSettings.cs` | 设置模型 + ViewModel（含 `VerifySettings` 校验） |
-| `OffloaderSettingsView.xaml(.cs)` | 设置页（远端路径+浏览按钮、自动推送开关、高级参数） |
+| `OffloaderSettingsView.xaml(.cs)` | 设置页（远端路径+浏览按钮、已启用清单） |
 | `Models/GameSyncState.cs` | 单游戏状态（Enabled / LocalPath 快照 / LastPushUtc） |
 | `Models/SyncStateStore.cs` | 状态持久化（`states.json`，见 §5 踩坑） |
 | `Services/RobocopySyncService.cs` | robocopy 封装（拉取/推送/远端校验） |
@@ -33,7 +33,7 @@ Playnite 6 通用插件（GenericPlugin），给“不舍得删游戏但 SSD 吃
 1. 释放 = 终推+校验 → 整个删除本地目录 → `IsInstalled=false`（`InstallDirectory` 保留在库记录里供恢复）。
 2. 远端路径 = `RemoteRoot/{GameId}`（防重名/改名，用纯函数，不存库）。
 3. 不要全局白名单——手动“启用同步”本身就是白名单。
-4. 默认无自动推/拉；`EnableAutoPushOnStopped` 开关默认关。
+4. 无自动推/拉：`OnGameStopped` 自动推已移除，不再提供 `EnableAutoPushOnStopped` 开关。
 5. 不拦截启动，用 `GetInstallActions` 介入未安装游戏的安装流程。
 6. robocopy 参数沿用脚本版：拉取 `/E /R:2 /W:5 /MT:16`，推送 `/E /XO /IPG:50 /R:1 /W:3 /NP /NDL`（永不删远端，禁用 `/MIR`）。
 
@@ -60,7 +60,7 @@ Playnite 6 通用插件（GenericPlugin），给“不舍得删游戏但 SSD 吃
 ## 6. 已实测 / 待验证
 
 - 已验证：Debug+Release 0 警告构建；robocopy 推/拉往返（退出码 1、文件数一致）；`states.json` 写入+重载；设置视图可实例化；`extension.yaml` 解析（同目录正常插件逐项比对一致）。
-- 待用户实机验证：小游戏完整走一遍 启用→推送→释放→安装恢复；`GetInstallActions` 是否出现在未安装游戏的安装按钮里（若不出现，降级为右键恢复菜单）；UNC 路径；退出后自动推开关。
+- 待用户实机验证：小游戏完整走一遍 启用→推送→释放→安装恢复；`GetInstallActions` 是否出现在未安装游戏的安装按钮里（若不出现，降级为右键恢复菜单）；UNC 路径。
 
 ## 7. 二期候选（未定，需用户拍板再做）
 

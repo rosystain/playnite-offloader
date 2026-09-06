@@ -123,64 +123,6 @@ namespace Offloader
             return new[] { new OffloaderInstallController(this, game) };
         }
 
-        public override void OnGameStopped(OnGameStoppedEventArgs args)
-        {
-            try
-            {
-                var game = args?.Game;
-                if (game == null || !CurrentSettings.EnableAutoPushOnStopped || !IsEnrolled(game) || !game.IsInstalled)
-                {
-                    return;
-                }
-                var local = SafeLocalPath(game);
-                if (string.IsNullOrWhiteSpace(local) || !Directory.Exists(local))
-                {
-                    return;
-                }
-                var gameId = game.Id;
-                var gameName = game.Name;
-                Task.Run(() =>
-                {
-                    var gate = gameLocks.GetOrAdd(gameId, _ => new SemaphoreSlim(1, 1));
-                    if (!gate.Wait(0))
-                    {
-                        logger.Info($"Offloader: {gameName} 已有同步在进行，跳过退出后自动推送。");
-                        return;
-                    }
-                    bgRunning[gameId] = 0;
-                    try
-                    {
-                        var remote = SyncStateStore.GetRemotePath(CurrentSettings.RemoteRoot, gameId);
-                        var bgPushArgs = RobocopyPresets.GetBackgroundPushArgs();
-                        var res = sync.Push(local, remote, CancellationToken.None, bgPushArgs, true);
-                        if (res.Success)
-                        {
-                            store.UpdateLastPush(gameId);
-                            logger.Info($"Offloader: {gameName} 退出后自动推送成功。");
-                        }
-                        else
-                        {
-                            logger.Error($"Offloader: {gameName} 退出后自动推送失败，退出码 {res.ExitCode}。");
-                            PlayniteApi.Notifications.Add(gameId + "-autopush", $"Offloader：{gameName} 自动推送失败（robocopy 退出码 {res.ExitCode}），请手动推送。{OutputTail(res.Output)}", NotificationType.Error);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.Error(ex, $"Offloader: {gameName} 退出后自动推送异常。");
-                    }
-                    finally
-                    {
-                        bgRunning.TryRemove(gameId, out _);
-                        gate.Release();
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex, "Offloader: OnGameStopped 处理异常。");
-            }
-        }
-
         #region 菜单动作
 
         private void EnableGames(List<Game> games)
@@ -819,7 +761,10 @@ namespace Offloader
                     DisplayName = dbGame != null ? dbGame.Name : "未知游戏 (" + id + ")",
                     IsOrphan = dbGame == null,
                     RemoteState = !exists ? "缺失" : (hasData ? "有数据" : "空目录"),
+                    InstallState = dbGame == null ? "—" : (dbGame.IsInstalled ? "已安装" : "未安装"),
+                    IsInstalled = dbGame?.IsInstalled ?? false,
                     LastPushText = snap?.LastPushUtc == null ? "—" : snap.LastPushUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm"),
+                    LastPushSortKey = snap?.LastPushUtc == null ? long.MinValue : snap.LastPushUtc.Value.Ticks,
                     LocalPath = local
                 });
             }

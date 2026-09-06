@@ -15,9 +15,6 @@
             <TextBlock Text="示例：\\NAS\games\Offloader 或 D:\GameArchive。释放后本地整个目录会被删除，远端保留唯一副本，请务必确认该路径有备份/冗余。"
                        TextWrapping="Wrap" Opacity="0.7" Margin="0,4,0,0"/>
 
-            <CheckBox Content="游戏退出后自动推送到远端（默认关闭，建议保持关闭，手动推送更安全）"
-                      IsChecked="{Binding Settings.EnableAutoPushOnStopped}" Margin="0,12,0,0"/>
-
             <TextBlock Text="同步均为多线程全速（前台 /MT:16，后台 /MT:8 + 低进程优先级让行，不限速，推送永不删除远端）:" TextWrapping="Wrap" Opacity="0.7" Margin="0,12,0,0"/>
 
             <TextBlock Text="已启用清单（远端存在 GameId 目录即算启用，空目录也算，靠下次推送自愈）:" FontWeight="Bold" Margin="0,12,0,0" TextWrapping="Wrap"/>
@@ -26,7 +23,6 @@
                 <Button Content="刷新状态" Width="80" Margin="6,0,0,0" Click="RefreshEnrolled_Click"/>
             </StackPanel>
             <TextBlock Text="{Binding EnrolledStatus}" Opacity="0.7" Margin="0,4,0,0" TextWrapping="Wrap"/>
-            <TextBlock Text="移除 = 删除远端整个 GameId 目录并清状态（含库里已删游戏的孤儿记录），不可恢复；有后台/前台任务在跑的会被拒绝。" TextWrapping="Wrap" Opacity="0.7" Margin="0,4,0,0"/>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

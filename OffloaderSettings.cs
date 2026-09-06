@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.ComponentModel;
 using System.Windows.Data;
 
 namespace Offloader
@@ -13,10 +14,8 @@ namespace Offloader
     public class OffloaderSettings : ObservableObject
     {
         private string remoteRoot = string.Empty;
-        private bool enableAutoPushOnStopped = false;
 
         public string RemoteRoot { get => remoteRoot; set => SetValue(ref remoteRoot, value); }
-        public bool EnableAutoPushOnStopped { get => enableAutoPushOnStopped; set => SetValue(ref enableAutoPushOnStopped, value); }
     }
 
     public class OffloaderSettingsViewModel : ObservableObject, ISettings
@@ -135,6 +134,7 @@ namespace Offloader
                 Enrolled = new ObservableCollection<EnrolledGameEntry>(entries ?? new List<EnrolledGameEntry>());
                 EnrolledStatus = status ?? string.Empty;
                 ApplyEnrolledFilter();
+                ApplyEnrolledSort();
             }
             catch (Exception ex)
             {
@@ -173,6 +173,75 @@ namespace Offloader
                     };
                 }
                 view.Refresh();
+            }
+            catch
+            {
+            }
+        }
+
+        private int enrolledSortIndex = 0;
+        /// <summary>清单排序键：0=游戏名，1=最后推送，2=安装状态。弹窗排序下拉框双向绑定它。</summary>
+        public int EnrolledSortIndex
+        {
+            get => enrolledSortIndex;
+            set
+            {
+                if (enrolledSortIndex != value)
+                {
+                    enrolledSortIndex = value;
+                    OnPropertyChanged();
+                    ApplyEnrolledSort();
+                }
+            }
+        }
+
+        private bool enrolledSortDescending = false;
+        /// <summary>清单是否降序。弹窗升/降序按钮切换它，内存态，不持久化。</summary>
+        public bool EnrolledSortDescending
+        {
+            get => enrolledSortDescending;
+            set
+            {
+                if (enrolledSortDescending != value)
+                {
+                    enrolledSortDescending = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(SortDirectionText));
+                    ApplyEnrolledSort();
+                }
+            }
+        }
+
+        public string SortDirectionText => EnrolledSortDescending ? "降序 ▾" : "升序 ▴";
+
+        private void ApplyEnrolledSort()
+        {
+            try
+            {
+                var view = CollectionViewSource.GetDefaultView(Enrolled);
+                if (view == null)
+                {
+                    return;
+                }
+                var dir = EnrolledSortDescending ? ListSortDirection.Descending : ListSortDirection.Ascending;
+                using (view.DeferRefresh())
+                {
+                    view.SortDescriptions.Clear();
+                    if (enrolledSortIndex == 2)
+                    {
+                        view.SortDescriptions.Add(new SortDescription(nameof(EnrolledGameEntry.IsInstalled), dir));
+                        view.SortDescriptions.Add(new SortDescription(nameof(EnrolledGameEntry.DisplayName), ListSortDirection.Ascending));
+                    }
+                    else if (enrolledSortIndex == 1)
+                    {
+                        view.SortDescriptions.Add(new SortDescription(nameof(EnrolledGameEntry.LastPushSortKey), dir));
+                        view.SortDescriptions.Add(new SortDescription(nameof(EnrolledGameEntry.DisplayName), ListSortDirection.Ascending));
+                    }
+                    else
+                    {
+                        view.SortDescriptions.Add(new SortDescription(nameof(EnrolledGameEntry.DisplayName), dir));
+                    }
+                }
             }
             catch
             {
