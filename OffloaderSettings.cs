@@ -45,7 +45,6 @@ namespace Offloader
         public void BeginEdit()
         {
             editingClone = Serialization.GetClone(Settings);
-            RefreshEnrolled();
         }
 
         public void CancelEdit()
@@ -69,20 +68,20 @@ namespace Offloader
             var root = Settings?.RemoteRoot?.Trim();
             if (string.IsNullOrEmpty(root))
             {
-                errors.Add("必须设置远端仓库目录（RemoteRoot），例如 \\\\NAS\\games\\Offloader 或 D:\\GameArchive。");
+                errors.Add(ResourceProvider.GetString("LOCoffloaderVerifyRootRequired"));
                 return false;
             }
             try
             {
                 if (!Path.IsPathRooted(root))
                 {
-                    errors.Add("远端仓库目录必须是绝对路径。");
+                    errors.Add(ResourceProvider.GetString("LOCoffloaderVerifyRootAbsolute"));
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                errors.Add("远端仓库目录不合法：" + ex.Message);
+                errors.Add(string.Format(ResourceProvider.GetString("LOCoffloaderVerifyRootInvalid"), ex.Message));
                 return false;
             }
             return true;
@@ -138,7 +137,7 @@ namespace Offloader
             }
             catch (Exception ex)
             {
-                EnrolledStatus = "刷新清单失败：" + ex.Message;
+                EnrolledStatus = ResourceProvider.GetString("LOCoffloaderListRefreshFailed") + "\n" + ex.Message;
             }
         }
 
@@ -212,7 +211,7 @@ namespace Offloader
             }
         }
 
-        public string SortDirectionText => EnrolledSortDescending ? "降序 ▾" : "升序 ▴";
+        public string SortDirectionText => EnrolledSortDescending ? ResourceProvider.GetString("LOCoffloaderListSortDesc") : ResourceProvider.GetString("LOCoffloaderListSortAsc");
 
         private void ApplyEnrolledSort()
         {
@@ -282,17 +281,17 @@ namespace Offloader
                 }
                 else
                 {
-                    fails.Add((string.IsNullOrWhiteSpace(name) ? id.ToString() : name) + "：" + error);
+                    fails.Add(string.Format(ResourceProvider.GetString("LOCoffloaderFmtNamedError"), (string.IsNullOrWhiteSpace(name) ? id.ToString() : name), error));
                 }
             }
             RefreshEnrolled();
             if (fails.Count > 0)
             {
-                plugin.PlayniteApi.Dialogs.ShowErrorMessage("部分移除失败：\n" + string.Join("\n", fails.Take(10)));
+                plugin.PlayniteApi.Dialogs.ShowErrorMessage(ResourceProvider.GetString("LOCoffloaderListRemovePartial") + "\n" + string.Join("\n", fails.Take(10)));
             }
             else
             {
-                plugin.PlayniteApi.Dialogs.ShowMessage("已移除 " + ok + " 条远端记录（目录已删除，不可恢复）。", "Offloader");
+                plugin.PlayniteApi.Dialogs.ShowMessage(string.Format(ResourceProvider.GetString("LOCoffloaderListRemoveDone"), ok), "Offloader");
             }
         }
 

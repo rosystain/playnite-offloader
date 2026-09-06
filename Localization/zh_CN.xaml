@@ -1,0 +1,121 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- 右键菜单（位于 Offloader 分组下，不带插件名前缀） -->
+    <sys:String x:Key="LOCoffloaderMenuEnable">启用同步</sys:String>
+    <sys:String x:Key="LOCoffloaderMenuPushNow">立即推送到远端</sys:String>
+    <sys:String x:Key="LOCoffloaderMenuCancelBgPush">取消后台推送</sys:String>
+    <sys:String x:Key="LOCoffloaderMenuOffload">释放本地空间</sys:String>
+    <sys:String x:Key="LOCoffloaderMenuOpenRemote">打开远端目录</sys:String>
+
+    <!-- 安装动作 -->
+    <sys:String x:Key="LOCoffloaderInstallRestore">从 Offloader 仓库恢复</sys:String>
+
+    <!-- 通知 -->
+    <sys:String x:Key="LOCoffloaderNotifyEnabled">已为 {0} 个游戏启用同步，后台推送已开始。</sys:String>
+    <sys:String x:Key="LOCoffloaderNotifySkippedBusy">{0}：已有同步在进行，本次操作已跳过。</sys:String>
+    <sys:String x:Key="LOCoffloaderNotifyPushFailed">{0}：推送失败。{1}</sys:String>
+    <sys:String x:Key="LOCoffloaderNotifyOffloadFailed">{0}：释放失败。{1}</sys:String>
+    <sys:String x:Key="LOCoffloaderNotifyRemoteMissing">{0}：远端目录不存在。</sys:String>
+    <sys:String x:Key="LOCoffloaderNotifyBgStarted">{0}：正在后台推送…</sys:String>
+    <sys:String x:Key="LOCoffloaderNotifyBgDone">{0}：后台推送完成。</sys:String>
+    <sys:String x:Key="LOCoffloaderNotifyBgFailed">{0}：后台推送失败（robocopy 退出码 {1}）。{2}</sys:String>
+    <sys:String x:Key="LOCoffloaderNotifyBgCancelled">{0}：后台推送已取消，可改用立即推送。</sys:String>
+    <sys:String x:Key="LOCoffloaderNotifyBgCancelCount">已取消 {0} 个后台推送，已传文件保留在远端，下次推送自动续传。</sys:String>
+
+    <!-- 进度框 -->
+    <sys:String x:Key="LOCoffloaderProgPushCaption">Offloader 推送中…</sys:String>
+    <sys:String x:Key="LOCoffloaderProgPushing">正在推送：{0}</sys:String>
+    <sys:String x:Key="LOCoffloaderProgOffloadCaption">Offloader 释放中…</sys:String>
+    <sys:String x:Key="LOCoffloaderProgFinalPush">最终推送：{0}</sys:String>
+    <sys:String x:Key="LOCoffloaderProgDeleting">删除本地文件：{0}</sys:String>
+    <sys:String x:Key="LOCoffloaderProgRestoreCaption">Offloader 恢复中：{0}</sys:String>
+    <sys:String x:Key="LOCoffloaderProgRestoring">正在恢复：{0}</sys:String>
+
+    <!-- 对话框（多行文本由代码以 \n 拼接，资源保持单行） -->
+    <sys:String x:Key="LOCoffloaderDlgOffloadCaption">Offloader：释放确认</sys:String>
+    <sys:String x:Key="LOCoffloaderDlgOffloadHead">确定释放以下 {0} 个游戏的本地文件吗？</sys:String>
+    <sys:String x:Key="LOCoffloaderDlgOffloadNote">将先执行最终推送并校验远端，校验通过后才会删除本地整个目录，并将游戏标记为未安装。</sys:String>
+    <sys:String x:Key="LOCoffloaderDlgRestoreCaption">Offloader：恢复确认</sys:String>
+    <sys:String x:Key="LOCoffloaderDlgRestoreHead">确定从 Offloader 仓库恢复以下游戏吗？</sys:String>
+    <sys:String x:Key="LOCoffloaderDlgRestoreNote">恢复将占用本地磁盘，完成后游戏将标记为已安装。</sys:String>
+    <sys:String x:Key="LOCoffloaderFmtGame">游戏：{0}</sys:String>
+    <sys:String x:Key="LOCoffloaderFmtRemote">远端：{0}</sys:String>
+    <sys:String x:Key="LOCoffloaderFmtRemoteData">远端数据：{0}</sys:String>
+    <sys:String x:Key="LOCoffloaderFmtRestoreTo">恢复到：{0}</sys:String>
+    <sys:String x:Key="LOCoffloaderRemoteStats">{0} 个文件，共 {1}</sys:String>
+    <sys:String x:Key="LOCoffloaderFmtNamedError">{0}：{1}</sys:String>
+    <sys:String x:Key="LOCoffloaderRemoteStatsUnavailable">远端统计不可用（仍可继续）。</sys:String>
+
+    <!-- 提示与错误（以冒号结尾的条目，代码在其后追加 "\n" + 详情） -->
+    <sys:String x:Key="LOCoffloaderMsgNoPushable">没有可推送的游戏：需已启用同步、已安装且本地目录存在。</sys:String>
+    <sys:String x:Key="LOCoffloaderMsgNoPushableBg">没有可推送的游戏：需已安装且本地目录存在。</sys:String>
+    <sys:String x:Key="LOCoffloaderMsgRemoteRootRequired">请先在 Offloader 设置中配置远端仓库目录。</sys:String>
+    <sys:String x:Key="LOCoffloaderMsgOpenRemoteFailed">打开远端目录失败：</sys:String>
+    <sys:String x:Key="LOCoffloaderErrRobocopyExit">robocopy 退出码 {0}（≥8 为失败）。{1}</sys:String>
+    <sys:String x:Key="LOCoffloaderErrFinalPushFailed">最终推送失败（robocopy 退出码 {0}），未删除本地文件。{1}</sys:String>
+    <sys:String x:Key="LOCoffloaderErrRemoteVerify">远端校验未通过（远端为空或不可达），未删除本地文件。</sys:String>
+    <sys:String x:Key="LOCoffloaderErrLocalPathEmpty">本地路径为空，已中止以防误删。</sys:String>
+    <sys:String x:Key="LOCoffloaderErrNoRemoteRoot">未设置远端仓库目录。</sys:String>
+    <sys:String x:Key="LOCoffloaderErrNoRemoteData">远端仓库无此游戏数据：{0}</sys:String>
+    <sys:String x:Key="LOCoffloaderErrRestoreTargetEmpty">恢复目标路径为空，已中止以防误写。</sys:String>
+    <sys:String x:Key="LOCoffloaderErrRestoreFailed">从 Offloader 仓库恢复失败：</sys:String>
+    <sys:String x:Key="LOCoffloaderErrRemoveBgRunning">该游戏正在后台推送，请先取消后再移除。</sys:String>
+    <sys:String x:Key="LOCoffloaderErrRemoveBusy">该游戏有同步在进行，请稍后再试。</sys:String>
+    <sys:String x:Key="LOCoffloaderErrArgRemoteEmpty">远端路径为空。</sys:String>
+    <sys:String x:Key="LOCoffloaderErrArgLocalEmpty">本地路径为空。</sys:String>
+    <sys:String x:Key="LOCoffloaderErrLocalDirMissing">本地游戏目录不存在：{0}</sys:String>
+    <sys:String x:Key="LOCoffloaderErrRemoteMissing">远端仓库不存在：{0}</sys:String>
+    <sys:String x:Key="LOCoffloaderErrRobocopyStart">无法启动 robocopy：{0}</sys:String>
+
+    <!-- 同步引擎进度行 -->
+    <sys:String x:Key="LOCoffloaderSyncSyncing">正在同步…</sys:String>
+    <sys:String x:Key="LOCoffloaderSyncAvgSpeed">平均速度 {0:F1} MB/s</sys:String>
+
+    <!-- 设置页 -->
+    <sys:String x:Key="LOCoffloaderSetRemoteRootLabel">远端仓库目录（必填，按游戏 ID 存放）：</sys:String>
+    <sys:String x:Key="LOCoffloaderSetBrowse">浏览…</sys:String>
+    <sys:String x:Key="LOCoffloaderSetRemoteRootTooltip">示例：\\NAS\games\Offloader 或 D:\GameArchive。释放会删除本地整个目录，请务必确保该路径有备份/冗余。同步恒为多线程全速（前台 /MT:16，后台 /MT:8 + 低进程优先级让行），推送永不删除远端文件。</sys:String>
+    <sys:String x:Key="LOCoffloaderSetEnrolledTitle">已启用清单</sys:String>
+    <sys:String x:Key="LOCoffloaderSetManageEnrolled">管理已启用清单…</sys:String>
+    <sys:String x:Key="LOCoffloaderBrowseDialogTitle">选择 Offloader 远端仓库目录</sys:String>
+    <sys:String x:Key="LOCoffloaderVerifyRootRequired">必须设置远端仓库目录，例如 \\NAS\games\Offloader 或 D:\GameArchive。</sys:String>
+    <sys:String x:Key="LOCoffloaderVerifyRootAbsolute">远端仓库目录必须是绝对路径。</sys:String>
+    <sys:String x:Key="LOCoffloaderVerifyRootInvalid">远端仓库目录不合法：{0}</sys:String>
+
+    <!-- 已启用清单弹窗 -->
+    <sys:String x:Key="LOCoffloaderListWindowTitle">Offloader：已启用清单</sys:String>
+    <sys:String x:Key="LOCoffloaderListStatusCount">已启用 {0} 个游戏</sys:String>
+    <sys:String x:Key="LOCoffloaderListStatusUnreachable">远端仓库不可达，已回退显示本机记录：{0}</sys:String>
+    <sys:String x:Key="LOCoffloaderListRefresh">刷新</sys:String>
+    <sys:String x:Key="LOCoffloaderListRefreshFailed">刷新清单失败：</sys:String>
+    <sys:String x:Key="LOCoffloaderListOpenFailed">打开清单失败：</sys:String>
+    <sys:String x:Key="LOCoffloaderListSearchHint">搜索游戏名称或 ID…</sys:String>
+    <sys:String x:Key="LOCoffloaderListSearchTooltip">按游戏名称或 ID 过滤</sys:String>
+    <sys:String x:Key="LOCoffloaderListSortLabel">排序：</sys:String>
+    <sys:String x:Key="LOCoffloaderListSortName">游戏名称</sys:String>
+    <sys:String x:Key="LOCoffloaderListSortLastPush">最后推送</sys:String>
+    <sys:String x:Key="LOCoffloaderListSortInstall">安装状态</sys:String>
+    <sys:String x:Key="LOCoffloaderListSortAsc">升序 ▴</sys:String>
+    <sys:String x:Key="LOCoffloaderListSortDesc">降序 ▾</sys:String>
+    <sys:String x:Key="LOCoffloaderListSortToggle">切换升序/降序</sys:String>
+    <sys:String x:Key="LOCoffloaderListColGame">游戏</sys:String>
+    <sys:String x:Key="LOCoffloaderListColLocalPath">本地路径</sys:String>
+    <sys:String x:Key="LOCoffloaderListRemoveSelected">移除所选记录</sys:String>
+    <sys:String x:Key="LOCoffloaderListRemoveSelectFirst">请先在清单中选择要移除的记录。</sys:String>
+    <sys:String x:Key="LOCoffloaderListRemoveCaption">Offloader：移除确认</sys:String>
+    <sys:String x:Key="LOCoffloaderListRemoveHead">确定移除以下 {0} 条记录吗？</sys:String>
+    <sys:String x:Key="LOCoffloaderListRemoveNote">将永久删除远端目录与同步记录，不可恢复。</sys:String>
+    <sys:String x:Key="LOCoffloaderListRemoveDone">已移除 {0} 条记录。</sys:String>
+    <sys:String x:Key="LOCoffloaderListRemovePartial">部分移除失败：</sys:String>
+    <sys:String x:Key="LOCoffloaderListRemoveFailed">移除失败：</sys:String>
+    <sys:String x:Key="LOCoffloaderListClose">关闭</sys:String>
+    <sys:String x:Key="LOCoffloaderUnknownGame">未识别游戏（{0}）</sys:String>
+    <sys:String x:Key="LOCoffloaderStateInstalled">已安装</sys:String>
+    <sys:String x:Key="LOCoffloaderStateNotInstalled">未安装</sys:String>
+    <sys:String x:Key="LOCoffloaderStateRemoteMissing">缺失</sys:String>
+    <sys:String x:Key="LOCoffloaderStateRemoteHasData">有数据</sys:String>
+    <sys:String x:Key="LOCoffloaderStateRemoteEmpty">空目录</sys:String>
+
+</ResourceDictionary>

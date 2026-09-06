@@ -20,11 +20,13 @@ Playnite 6 通用插件（GenericPlugin），给“不舍得删游戏但 SSD 吃
 | `Offloader.cs` | 插件主体：右键菜单、安装动作、释放/推送/恢复编排、事件 |
 | `OffloaderInstallController.cs` | 自定义安装控制器（未安装游戏的“从 Offloader 仓库恢复”） |
 | `OffloaderSettings.cs` | 设置模型 + ViewModel（含 `VerifySettings` 校验） |
-| `OffloaderSettingsView.xaml(.cs)` | 设置页（远端路径+浏览按钮、已启用清单） |
+| `OffloaderSettingsView.xaml(.cs)` | 设置页（远端路径+浏览按钮、已启用清单入口） |
 | `Models/GameSyncState.cs` | 单游戏状态（Enabled / LocalPath 快照 / LastPushUtc） |
 | `Models/SyncStateStore.cs` | 状态持久化（`states.json`，见 §5 踩坑） |
 | `Services/RobocopySyncService.cs` | robocopy 封装（拉取/推送/远端校验） |
 | `extension.yaml` | 扩展清单（Id 含 GUID，后缀即实例标识） |
+| `Localization/en_US.xaml` | 英文基线文案（98 个 `LOCoffloader*` key，唯一真相源） |
+| `Localization/zh_CN.xaml` | 中文文案（key/占位符必须与 en_US 逐项对齐） |
 | `example/playnite-nas-sync/` | 旧版 ps1 实现，只读参考，不参与构建 |
 | `packages/PlayniteSDK.6.15.0/` | SDK（已提交，无需还原即可构建） |
 
@@ -57,12 +59,21 @@ Playnite 6 通用插件（GenericPlugin），给“不舍得删游戏但 SSD 吃
 5. **bash 里跑 powershell 时 `$_` 会被 bash 展开**，涉及 `$` 的命令一律写成 `.ps1` 文件再 `-File` 执行，用完即删。
 6. `robocopy` 成功判定是 **`ExitCode < 8`**（0–7 都是成功），不要按 0 判断。
 
-## 6. 已实测 / 待验证
+## 6. 本地化约定（二期首轮已落地，新 UI 文本必须遵守）
+
+- **英语为基线**：所有面向用户的字符串住在 `Localization/en_US.xaml`，key 前缀 `LOCoffloader` + 分类（`Menu*`/`Notify*`/`Prog*`/`Dlg*`/`Err*`/`Set*`/`List*`/`Verify*`/`Fmt*`/`State*`/`Sync*`）；`zh_CN.xaml` 逐 key 对齐翻译。新增文案＝两个字典各加一条，禁止在代码里硬编码任何语言 UI 字符串。
+- 代码侧用 `Playnite.SDK.ResourceProvider.GetString("LOCoffloaderXxx")`（缺失时 Playnite 回落 en_US，再缺失返回 key 本身）；静态 XAML 用 `{DynamicResource}`；带参用 `string.Format(GetString(...), args)`，占位符 `{0}{1}` 两语言必须一致。
+- **多行文本不进字典**：XAML 资源串一律单行，换行在 C# 侧用 `\n` 拼接（确认框拆 Head/字段 Fmt*/Note 三段）；以冒号结尾的错误 key，由代码追加 `"\n" + 详情`。
+- 不本地化的部分：`logger.*` 日志、代码注释、robocopy 输出解析正则（`新文件|New File` 等匹配的是 Windows 系统 locale）、`OutputTail` 透传的 robocopy 原始输出。
+- 已启用清单 UI：主面板只剩「远端目录 + 管理按钮」；计数/不可达回退提示显示在弹窗副标题（绑 `EnrolledStatus`），刷新由弹窗构造/刷新按钮触发，主面板不再预刷。
+- csproj 的 `Localization\*.xaml` 是通配 `CopyToOutputDirectory=PreserveNewest`，新语言文件直接放进目录即可，无需改工程。
+
+## 7. 已实测 / 待验证
 
 - 已验证：Debug+Release 0 警告构建；robocopy 推/拉往返（退出码 1、文件数一致）；`states.json` 写入+重载；设置视图可实例化；`extension.yaml` 解析（同目录正常插件逐项比对一致）。
 - 待用户实机验证：小游戏完整走一遍 启用→推送→释放→安装恢复；`GetInstallActions` 是否出现在未安装游戏的安装按钮里（若不出现，降级为右键恢复菜单）；UNC 路径。
 
-## 7. 二期候选（未定，需用户拍板再做）
+## 8. 二期候选（未定，需用户拍板再做）
 
 - 远端完整性校验增强（目前只判非空：文件数/大小展示）。
 - 恢复目标不存在时的改良交互；重名/删库重导后的孤儿远端清理工具。

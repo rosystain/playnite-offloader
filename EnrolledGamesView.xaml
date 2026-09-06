@@ -3,35 +3,34 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <DockPanel Margin="10" TextElement.Foreground="{DynamicResource TextBrush}">
         <StackPanel DockPanel.Dock="Top">
-            <TextBlock Text="已启用清单" FontSize="16" FontWeight="Bold"/>
-            <TextBlock Text="远端存在 GameId 目录即算启用（含空目录，靠下次推送自愈）。" TextWrapping="Wrap" Opacity="0.7" Margin="0,4,0,0"/>
+            <TextBlock Text="{DynamicResource LOCoffloaderSetEnrolledTitle}" FontSize="16" FontWeight="Bold"/>
+            <TextBlock Text="{Binding EnrolledStatus}" Opacity="0.7" Margin="0,4,0,0" TextWrapping="Wrap"/>
             <DockPanel Margin="0,8,0,0">
-                <Button Content="刷新" Width="70" DockPanel.Dock="Right" Margin="6,0,0,0" Click="Refresh_Click"/>
+                <Button Content="{DynamicResource LOCoffloaderListRefresh}" Width="70" DockPanel.Dock="Right" Margin="6,0,0,0" Click="Refresh_Click"/>
                 <Grid>
-                    <TextBox x:Name="SearchBox" Text="{Binding EnrolledFilter, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center" ToolTip="按游戏标题或 GameID 过滤" TextChanged="SearchBox_TextChanged"/>
-                    <TextBlock x:Name="SearchHint" Text="搜索游戏标题或 GameID…" Opacity="0.5" Margin="6,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" Foreground="{DynamicResource TextBrush}"/>
+                    <TextBox x:Name="SearchBox" Text="{Binding EnrolledFilter, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center" ToolTip="{DynamicResource LOCoffloaderListSearchTooltip}" TextChanged="SearchBox_TextChanged"/>
+                    <TextBlock x:Name="SearchHint" Text="{DynamicResource LOCoffloaderListSearchHint}" Opacity="0.5" Margin="6,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" Foreground="{DynamicResource TextBrush}"/>
                 </Grid>
             </DockPanel>
             <StackPanel Orientation="Horizontal" Margin="0,6,0,0" VerticalAlignment="Center">
-                <TextBlock Text="排序：" VerticalAlignment="Center" Opacity="0.7"/>
+                <TextBlock Text="{DynamicResource LOCoffloaderListSortLabel}" VerticalAlignment="Center" Opacity="0.7"/>
                 <ComboBox Width="110" SelectedIndex="{Binding EnrolledSortIndex, Mode=TwoWay}">
-                    <ComboBoxItem Content="游戏名"/>
-                    <ComboBoxItem Content="最后推送"/>
-                    <ComboBoxItem Content="安装状态"/>
+                    <ComboBoxItem Content="{DynamicResource LOCoffloaderListSortName}"/>
+                    <ComboBoxItem Content="{DynamicResource LOCoffloaderListSortLastPush}"/>
+                    <ComboBoxItem Content="{DynamicResource LOCoffloaderListSortInstall}"/>
                 </ComboBox>
-                <Button Content="{Binding SortDirectionText}" Width="70" Margin="6,0,0,0" Click="SortDir_Click" ToolTip="切换升序 / 降序"/>
+                <Button Content="{Binding SortDirectionText}" Width="70" Margin="6,0,0,0" Click="SortDir_Click" ToolTip="{DynamicResource LOCoffloaderListSortToggle}"/>
             </StackPanel>
-            <TextBlock Text="{Binding EnrolledStatus}" Opacity="0.7" Margin="0,4,0,0" TextWrapping="Wrap"/>
         </StackPanel>
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-            <Button Content="移除所选远端记录" Width="140" Click="Remove_Click"/>
-            <Button Content="关闭" Width="80" Margin="6,0,0,0" Click="Close_Click"/>
+            <Button Content="{DynamicResource LOCoffloaderListRemoveSelected}" Width="150" Click="Remove_Click"/>
+            <Button Content="{DynamicResource LOCoffloaderListClose}" Width="80" Margin="6,0,0,0" Click="Close_Click"/>
         </StackPanel>
         <ListView x:Name="EnrolledList" ItemsSource="{Binding Enrolled}" SelectionMode="Extended" Margin="0,6,0,0"
                   Foreground="{DynamicResource TextBrush}" Background="{DynamicResource ControlBackgroundBrush}">
             <ListView.View>
                 <GridView>
-                    <GridViewColumn Header="游戏" Width="240">
+                    <GridViewColumn Header="{DynamicResource LOCoffloaderListColGame}" Width="240">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding DisplayName}" ToolTip="{Binding DisplayName}"
@@ -40,7 +39,7 @@
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Header="安装状态" Width="70">
+                    <GridViewColumn Header="{DynamicResource LOCoffloaderListSortInstall}" Width="90">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding InstallState}"
@@ -48,7 +47,7 @@
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Header="最后推送" Width="120">
+                    <GridViewColumn Header="{DynamicResource LOCoffloaderListSortLastPush}" Width="120">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding LastPushText}"
@@ -56,7 +55,7 @@
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Header="本地路径" Width="260">
+                    <GridViewColumn Header="{DynamicResource LOCoffloaderListColLocalPath}" Width="260">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding LocalPath}" ToolTip="{Binding LocalPath}"

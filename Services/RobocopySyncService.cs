@@ -42,15 +42,15 @@ namespace Offloader.Services
         {
             if (string.IsNullOrWhiteSpace(remotePath))
             {
-                throw new ArgumentException("远端路径为空。");
+                throw new ArgumentException(ResourceProvider.GetString("LOCoffloaderErrArgRemoteEmpty"));
             }
             if (string.IsNullOrWhiteSpace(localPath))
             {
-                throw new ArgumentException("本地路径为空。");
+                throw new ArgumentException(ResourceProvider.GetString("LOCoffloaderErrArgLocalEmpty"));
             }
             if (!Directory.Exists(remotePath))
             {
-                throw new DirectoryNotFoundException("远端仓库不存在：" + remotePath);
+                throw new DirectoryNotFoundException(string.Format(ResourceProvider.GetString("LOCoffloaderErrRemoteMissing"), remotePath));
             }
             Directory.CreateDirectory(localPath);
             // 拉取恒为前台多线程全速，仅进程优先级让行（BelowNormal 让 CPU，不降吞吐）
@@ -61,15 +61,15 @@ namespace Offloader.Services
         {
             if (string.IsNullOrWhiteSpace(localPath))
             {
-                throw new ArgumentException("本地路径为空。");
+                throw new ArgumentException(ResourceProvider.GetString("LOCoffloaderErrArgLocalEmpty"));
             }
             if (string.IsNullOrWhiteSpace(remotePath))
             {
-                throw new ArgumentException("远端路径为空。");
+                throw new ArgumentException(ResourceProvider.GetString("LOCoffloaderErrArgRemoteEmpty"));
             }
             if (!Directory.Exists(localPath))
             {
-                throw new DirectoryNotFoundException("本地游戏目录不存在：" + localPath);
+                throw new DirectoryNotFoundException(string.Format(ResourceProvider.GetString("LOCoffloaderErrLocalDirMissing"), localPath));
             }
             Directory.CreateDirectory(remotePath);
             return Run(localPath, remotePath, extraArgs, cancelToken, lowPriority, onProgress);
@@ -146,7 +146,7 @@ namespace Offloader.Services
         {
             var args = string.Format("\"{0}\" \"{1}\" {2}", source.TrimEnd('\\'), dest.TrimEnd('\\'), extraArgs ?? string.Empty);
             logger.Info(string.Format("Offloader: robocopy {0}", args));
-            onProgress?.Invoke(string.Format("正在同步…\n{0}\n→ {1}", source, dest));
+            onProgress?.Invoke(string.Format("{0}\n{1}\n→ {2}", ResourceProvider.GetString("LOCoffloaderSyncSyncing"), source, dest));
 
             var psi = new ProcessStartInfo
             {
@@ -194,7 +194,7 @@ namespace Offloader.Services
                         var speedMatch = SpeedLineRegex.Match(trimmed);
                         if (speedMatch.Success && double.TryParse(speedMatch.Groups[1].Value.Replace(",", string.Empty), out var bytesPerSec) && bytesPerSec > 0)
                         {
-                            onProgress(string.Format("平均速度 {0:F1} MB/s\n{1}\n→ {2}", bytesPerSec / 1048576.0, source, dest));
+                            onProgress(string.Format("{0}\n{1}\n→ {2}", string.Format(ResourceProvider.GetString("LOCoffloaderSyncAvgSpeed"), bytesPerSec / 1048576.0), source, dest));
                             return;
                         }
                         var fileMatch = NewFileRegex.Match(trimmed);
@@ -263,7 +263,7 @@ namespace Offloader.Services
                 }
                 catch (Exception ex)
                 {
-                    throw new InvalidOperationException("无法启动 robocopy：" + ex.Message, ex);
+                    throw new InvalidOperationException(string.Format(ResourceProvider.GetString("LOCoffloaderErrRobocopyStart"), ex.Message), ex);
                 }
 
                 try

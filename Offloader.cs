@@ -64,7 +64,7 @@ namespace Offloader
             {
                 items.Add(new GameMenuItem
                 {
-                    Description = "Offloader：启用同步",
+                    Description = ResourceProvider.GetString("LOCoffloaderMenuEnable"),
                     MenuSection = MenuSection,
                     Action = a => EnableGames(a.Games)
                 });
@@ -73,7 +73,7 @@ namespace Offloader
             {
                 items.Add(new GameMenuItem
                 {
-                    Description = "Offloader：立即推送到远端",
+                    Description = ResourceProvider.GetString("LOCoffloaderMenuPushNow"),
                     MenuSection = MenuSection,
                     Action = a => PushGamesWithProgress(a.Games)
                 });
@@ -82,7 +82,7 @@ namespace Offloader
             {
                 items.Add(new GameMenuItem
                 {
-                    Description = "Offloader：取消后台推送",
+                    Description = ResourceProvider.GetString("LOCoffloaderMenuCancelBgPush"),
                     MenuSection = MenuSection,
                     Action = a => CancelBackgroundPushes(a.Games)
                 });
@@ -91,7 +91,7 @@ namespace Offloader
             {
                 items.Add(new GameMenuItem
                 {
-                    Description = "Offloader：释放本地并标记未安装",
+                    Description = ResourceProvider.GetString("LOCoffloaderMenuOffload"),
                     MenuSection = MenuSection,
                     Action = a => OffloadGamesWithProgress(a.Games)
                 });
@@ -100,7 +100,7 @@ namespace Offloader
             {
                 items.Add(new GameMenuItem
                 {
-                    Description = "Offloader：打开远端目录",
+                    Description = ResourceProvider.GetString("LOCoffloaderMenuOpenRemote"),
                     MenuSection = MenuSection,
                     Action = a => OpenRemoteDirs(a.Games)
                 });
@@ -135,7 +135,7 @@ namespace Offloader
             {
                 store.EnsureEntry(g.Id, g.InstallDirectory ?? string.Empty);
             }
-            PlayniteApi.Notifications.Add("offloader-enabled", $"Offloader：已启用 {games.Count} 个游戏的同步，后台推送已开始。", NotificationType.Info);
+            PlayniteApi.Notifications.Add("offloader-enabled", string.Format(ResourceProvider.GetString("LOCoffloaderNotifyEnabled"), games.Count), NotificationType.Info);
             // 启用即后台推送：已安装且本地目录存在的直接开始传，期间前台推送入口自动隐藏
             PushGamesInBackground(games);
         }
@@ -149,7 +149,7 @@ namespace Offloader
             var targets = games.Where(g => g != null && IsEnrolled(g) && g.IsInstalled && Directory.Exists(SafeLocalPath(g))).ToList();
             if (targets.Count == 0)
             {
-                PlayniteApi.Dialogs.ShowErrorMessage("没有可推送的游戏：需已启用同步（远端存在 GameId 目录）、已安装且本地目录存在。");
+                PlayniteApi.Dialogs.ShowErrorMessage(ResourceProvider.GetString("LOCoffloaderMsgNoPushable"));
                 return;
             }
             var fgArgs = RobocopyPresets.GetForegroundPushArgs();
@@ -157,7 +157,7 @@ namespace Offloader
             {
                 foreach (var g in targets)
                 {
-                    progress.Text = $"Offloader 推送中：{g.Name}";
+                    progress.Text = string.Format(ResourceProvider.GetString("LOCoffloaderProgPushing"), g.Name);
                     if (progress.CancelToken.IsCancellationRequested)
                     {
                         break;
@@ -165,17 +165,17 @@ namespace Offloader
                     var gate = gameLocks.GetOrAdd(g.Id, _ => new SemaphoreSlim(1, 1));
                     if (!gate.Wait(0))
                     {
-                        PlayniteApi.Notifications.Add(g.Id + "-push-busy", $"Offloader：{g.Name} 已有同步在进行，已跳过（等后台任务完成后可再推）。", NotificationType.Error);
+                        PlayniteApi.Notifications.Add(g.Id + "-push-busy", string.Format(ResourceProvider.GetString("LOCoffloaderNotifySkippedBusy"), g.Name), NotificationType.Error);
                         continue;
                     }
                     try
                     {
                         var local = SafeLocalPath(g);
                         var remote = SyncStateStore.GetRemotePath(CurrentSettings.RemoteRoot, g.Id);
-                        var res = await Task.Run(() => sync.Push(local, remote, progress.CancelToken, fgArgs, false, t => progress.Text = $"Offloader 推送中：{g.Name}\n{t}"));
+                        var res = await Task.Run(() => sync.Push(local, remote, progress.CancelToken, fgArgs, false, t => progress.Text = string.Format(ResourceProvider.GetString("LOCoffloaderProgPushing"), g.Name) + "\n" + t));
                         if (!res.Success)
                         {
-                            throw new InvalidOperationException($"robocopy 退出码 {res.ExitCode}（>=8 为失败）。{OutputTail(res.Output)}");
+                            throw new InvalidOperationException(string.Format(ResourceProvider.GetString("LOCoffloaderErrRobocopyExit"), res.ExitCode, OutputTail(res.Output)));
                         }
                         store.UpdateLastPush(g.Id);
                         store.UpdateLocalPath(g.Id, local);
@@ -187,14 +187,14 @@ namespace Offloader
                     catch (Exception ex)
                     {
                         logger.Error(ex, $"Offloader: 推送失败：{g.Name}");
-                        PlayniteApi.Notifications.Add(g.Id + "-push", $"Offloader：{g.Name} 推送失败：{ex.Message}", NotificationType.Error);
+                        PlayniteApi.Notifications.Add(g.Id + "-push", string.Format(ResourceProvider.GetString("LOCoffloaderNotifyPushFailed"), g.Name, ex.Message), NotificationType.Error);
                     }
                     finally
                     {
                         gate.Release();
                     }
                 }
-            }, new GlobalProgressOptions("Offloader 推送中…", true) { IsIndeterminate = true });
+            }, new GlobalProgressOptions(ResourceProvider.GetString("LOCoffloaderProgPushCaption"), true) { IsIndeterminate = true });
         }
 
         private void OffloadGamesWithProgress(List<Game> games)
@@ -209,8 +209,10 @@ namespace Offloader
                 return;
             }
             var confirm = PlayniteApi.Dialogs.ShowMessage(
-                $"确定释放以下 {targets.Count} 个游戏的本地文件吗？\n{string.Join("\n", targets.Select(g => "• " + g.Name))}\n\n流程：先做一次最终推送并校验远端，确认远端有数据后才会删除本地整个目录，并将游戏标记为未安装。",
-                "Offloader 释放确认",
+                string.Format(ResourceProvider.GetString("LOCoffloaderDlgOffloadHead"), targets.Count)
+                + "\n" + string.Join("\n", targets.Select(g => "• " + g.Name))
+                + "\n\n" + ResourceProvider.GetString("LOCoffloaderDlgOffloadNote"),
+                ResourceProvider.GetString("LOCoffloaderDlgOffloadCaption"),
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
             if (confirm != MessageBoxResult.Yes)
@@ -229,32 +231,32 @@ namespace Offloader
                     var gate = gameLocks.GetOrAdd(g.Id, _ => new SemaphoreSlim(1, 1));
                     if (!gate.Wait(0))
                     {
-                        PlayniteApi.Notifications.Add(g.Id + "-offload-busy", $"Offloader：{g.Name} 已有同步在进行，已跳过释放。", NotificationType.Error);
+                        PlayniteApi.Notifications.Add(g.Id + "-offload-busy", string.Format(ResourceProvider.GetString("LOCoffloaderNotifySkippedBusy"), g.Name), NotificationType.Error);
                         continue;
                     }
                     try
                     {
-                        progress.Text = $"Offloader 释放中（终推）：{g.Name}";
+                        progress.Text = string.Format(ResourceProvider.GetString("LOCoffloaderProgFinalPush"), g.Name);
                         var local = SafeLocalPath(g);
                         // 四重门：远端根合法 / 本地路径非空 / 本地是目录则终推 / 远端校验通过才删（是否启用已由 IsEnrolled 前置）
                         if (string.IsNullOrWhiteSpace(local))
                         {
-                            throw new InvalidOperationException("本地路径为空，为防止误删已中止。");
+                            throw new InvalidOperationException(ResourceProvider.GetString("LOCoffloaderErrLocalPathEmpty"));
                         }
                         var remote = SyncStateStore.GetRemotePath(CurrentSettings.RemoteRoot, g.Id);
                         if (Directory.Exists(local))
                         {
-                            var res = await Task.Run(() => sync.Push(local, remote, progress.CancelToken, offloadArgs, false, t => progress.Text = $"Offloader 释放中（终推）：{g.Name}\n{t}"));
+                            var res = await Task.Run(() => sync.Push(local, remote, progress.CancelToken, offloadArgs, false, t => progress.Text = string.Format(ResourceProvider.GetString("LOCoffloaderProgFinalPush"), g.Name) + "\n" + t));
                             if (!res.Success)
                             {
-                                throw new InvalidOperationException($"最终推送失败，robocopy 退出码 {res.ExitCode}，未删除本地。{OutputTail(res.Output)}");
+                                throw new InvalidOperationException(string.Format(ResourceProvider.GetString("LOCoffloaderErrFinalPushFailed"), res.ExitCode, OutputTail(res.Output)));
                             }
                         }
                         if (!sync.RemoteHasData(remote))
                         {
-                            throw new InvalidOperationException("远端校验未通过（远端为空或不可达），未删除本地。");
+                            throw new InvalidOperationException(ResourceProvider.GetString("LOCoffloaderErrRemoteVerify"));
                         }
-                        progress.Text = $"Offloader 释放中（删除本地）：{g.Name}";
+                        progress.Text = string.Format(ResourceProvider.GetString("LOCoffloaderProgDeleting"), g.Name);
                         if (Directory.Exists(local))
                         {
                             await Task.Run(() => Directory.Delete(local, true));
@@ -279,14 +281,14 @@ namespace Offloader
                     catch (Exception ex)
                     {
                         logger.Error(ex, $"Offloader: 释放失败：{g.Name}");
-                        PlayniteApi.Notifications.Add(g.Id + "-offload", $"Offloader：{g.Name} 释放失败：{ex.Message}", NotificationType.Error);
+                        PlayniteApi.Notifications.Add(g.Id + "-offload", string.Format(ResourceProvider.GetString("LOCoffloaderNotifyOffloadFailed"), g.Name, ex.Message), NotificationType.Error);
                     }
                     finally
                     {
                         gate.Release();
                     }
                 }
-            }, new GlobalProgressOptions("Offloader 释放中…", true) { IsIndeterminate = true });
+            }, new GlobalProgressOptions(ResourceProvider.GetString("LOCoffloaderProgOffloadCaption"), true) { IsIndeterminate = true });
         }
 
         private void OpenRemoteDirs(List<Game> games)
@@ -306,12 +308,12 @@ namespace Offloader
                     }
                     else
                     {
-                        PlayniteApi.Notifications.Add(g.Id + "-remote-missing", $"Offloader：{g.Name} 远端目录不存在。", NotificationType.Error);
+                        PlayniteApi.Notifications.Add(g.Id + "-remote-missing", string.Format(ResourceProvider.GetString("LOCoffloaderNotifyRemoteMissing"), g.Name), NotificationType.Error);
                     }
                 }
                 catch (Exception ex)
                 {
-                    ReportError($"打开远端目录失败：\n{ex.Message}");
+                    ReportError(ResourceProvider.GetString("LOCoffloaderMsgOpenRemoteFailed") + "\n" + ex.Message);
                 }
             }
         }
@@ -328,12 +330,12 @@ namespace Offloader
             }
             if (!RequireRemoteRoot())
             {
-                throw new InvalidOperationException("未设置远端仓库目录。");
+                throw new InvalidOperationException(ResourceProvider.GetString("LOCoffloaderErrNoRemoteRoot"));
             }
             var remote = SyncStateStore.GetRemotePath(CurrentSettings.RemoteRoot, game.Id);
             if (!sync.RemoteHasData(remote))
             {
-                throw new DirectoryNotFoundException("远端仓库无此游戏数据：" + remote);
+                throw new DirectoryNotFoundException(string.Format(ResourceProvider.GetString("LOCoffloaderErrNoRemoteData"), remote));
             }
             // 目标解析可能弹 SelectFolder，必须在进度框之前完成，避免被进度框盖住
             var target = ResolveRestoreTarget(game);
@@ -343,7 +345,7 @@ namespace Offloader
             }
             PlayniteApi.Dialogs.ActivateGlobalProgress(
                 progress => RestoreToTarget(game, target, progress),
-                new GlobalProgressOptions($"Offloader 恢复中：{game.Name}", true) { IsIndeterminate = true });
+                new GlobalProgressOptions(string.Format(ResourceProvider.GetString("LOCoffloaderProgRestoreCaption"), game.Name), true) { IsIndeterminate = true });
         }
 
         internal string ResolveRestoreTarget(Game game)
@@ -391,10 +393,18 @@ namespace Offloader
             long files;
             long bytes;
             var ok = sync.TryGetRemoteStats(remote, out files, out bytes);
-            var stats = ok ? string.Format("{0} 个文件，共 {1}", files, FormatBytes(bytes)) : "远端统计失败（仍可继续）";
+            var stats = ok
+                ? string.Format(ResourceProvider.GetString("LOCoffloaderRemoteStats"), files, FormatBytes(bytes))
+                : ResourceProvider.GetString("LOCoffloaderRemoteStatsUnavailable");
+            var body = ResourceProvider.GetString("LOCoffloaderDlgRestoreHead")
+                + "\n\n" + string.Format(ResourceProvider.GetString("LOCoffloaderFmtGame"), game.Name)
+                + "\n" + string.Format(ResourceProvider.GetString("LOCoffloaderFmtRemote"), remote)
+                + "\n" + string.Format(ResourceProvider.GetString("LOCoffloaderFmtRemoteData"), stats)
+                + "\n" + string.Format(ResourceProvider.GetString("LOCoffloaderFmtRestoreTo"), target)
+                + "\n\n" + ResourceProvider.GetString("LOCoffloaderDlgRestoreNote");
             var choice = PlayniteApi.Dialogs.ShowMessage(
-                string.Format("确定从 Offloader 仓库恢复以下游戏吗？\n\n游戏：{0}\n远端：{1}\n远端数据：{2}\n恢复到：{3}\n\n恢复将占用本地磁盘，完成后标记为已安装。", game.Name, remote, stats, target),
-                "Offloader 恢复确认",
+                body,
+                ResourceProvider.GetString("LOCoffloaderDlgRestoreCaption"),
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
             return choice == MessageBoxResult.Yes;
@@ -437,12 +447,12 @@ namespace Offloader
             }
             if (!RequireRemoteRoot())
             {
-                throw new InvalidOperationException("未设置远端仓库目录。");
+                throw new InvalidOperationException(ResourceProvider.GetString("LOCoffloaderErrNoRemoteRoot"));
             }
             var remote = SyncStateStore.GetRemotePath(CurrentSettings.RemoteRoot, game.Id);
             if (!sync.RemoteHasData(remote))
             {
-                throw new DirectoryNotFoundException("远端仓库无此游戏数据：" + remote);
+                throw new DirectoryNotFoundException(string.Format(ResourceProvider.GetString("LOCoffloaderErrNoRemoteData"), remote));
             }
             var target = ResolveRestoreTarget(game);
             RestoreToTarget(game, target, progress);
@@ -456,13 +466,13 @@ namespace Offloader
             }
             if (string.IsNullOrWhiteSpace(target))
             {
-                throw new InvalidOperationException("恢复目标路径为空，为防止误写已中止。");
+                throw new InvalidOperationException(ResourceProvider.GetString("LOCoffloaderErrRestoreTargetEmpty"));
             }
             var pullArgs = RobocopyPresets.GetPullArgs();
             var remote = SyncStateStore.GetRemotePath(CurrentSettings.RemoteRoot, game.Id);
             if (!sync.RemoteHasData(remote))
             {
-                throw new DirectoryNotFoundException("远端仓库无此游戏数据：" + remote);
+                throw new DirectoryNotFoundException(string.Format(ResourceProvider.GetString("LOCoffloaderErrNoRemoteData"), remote));
             }
             var gate = gameLocks.GetOrAdd(game.Id, _ => new SemaphoreSlim(1, 1));
             gate.Wait(progress?.CancelToken ?? CancellationToken.None);
@@ -473,12 +483,12 @@ namespace Offloader
                 {
                     if (progress != null)
                     {
-                        progress.Text = $"Offloader 恢复中：{game.Name}\n{t}";
+                        progress.Text = string.Format(ResourceProvider.GetString("LOCoffloaderProgRestoring"), game.Name) + "\n" + t;
                     }
                 });
                 if (!res.Success)
                 {
-                    throw new InvalidOperationException($"robocopy 退出码 {res.ExitCode}（>=8 为失败）。{OutputTail(res.Output)}");
+                    throw new InvalidOperationException(string.Format(ResourceProvider.GetString("LOCoffloaderErrRobocopyExit"), res.ExitCode, OutputTail(res.Output)));
                 }
                 var toUpdate = PlayniteApi.Database.Games.Get(game.Id) ?? game;
                 toUpdate.InstallDirectory = target;
@@ -506,7 +516,7 @@ namespace Offloader
             var targets = games.Where(g => g != null && g.IsInstalled && Directory.Exists(SafeLocalPath(g))).ToList();
             if (targets.Count == 0)
             {
-                PlayniteApi.Dialogs.ShowErrorMessage("没有可推送的游戏：需已安装且本地目录存在。");
+                PlayniteApi.Dialogs.ShowErrorMessage(ResourceProvider.GetString("LOCoffloaderMsgNoPushableBg"));
                 return;
             }
             var bgArgs = RobocopyPresets.GetBackgroundPushArgs();
@@ -515,7 +525,7 @@ namespace Offloader
                 var gate = gameLocks.GetOrAdd(g.Id, _ => new SemaphoreSlim(1, 1));
                 if (!gate.Wait(0))
                 {
-                    PlayniteApi.Notifications.Add(g.Id + "-push-bg-busy", $"Offloader：{g.Name} 已有同步在进行，已跳过后台推送。", NotificationType.Error);
+                    PlayniteApi.Notifications.Add(g.Id + "-push-bg-busy", string.Format(ResourceProvider.GetString("LOCoffloaderNotifySkippedBusy"), g.Name), NotificationType.Error);
                     continue;
                 }
                 var gameId = g.Id;
@@ -525,7 +535,7 @@ namespace Offloader
                 bgCts[gameId] = cts;
                 var local = SafeLocalPath(g);
                 var remote = SyncStateStore.GetRemotePath(CurrentSettings.RemoteRoot, gameId);
-                PlayniteApi.Notifications.Add(gameId + "-push-bg", $"Offloader：{gameName} 正在后台推送…", NotificationType.Info);
+                PlayniteApi.Notifications.Add(gameId + "-push-bg", string.Format(ResourceProvider.GetString("LOCoffloaderNotifyBgStarted"), gameName), NotificationType.Info);
                 Task.Run(() =>
                 {
                     try
@@ -536,24 +546,24 @@ namespace Offloader
                             store.UpdateLastPush(gameId);
                             store.UpdateLocalPath(gameId, local);
                             PlayniteApi.Notifications.Remove(gameId + "-push-bg");
-                            PlayniteApi.Notifications.Add(gameId + "-push-bg-done", $"Offloader：{gameName} 后台推送完成。", NotificationType.Info);
+                            PlayniteApi.Notifications.Add(gameId + "-push-bg-done", string.Format(ResourceProvider.GetString("LOCoffloaderNotifyBgDone"), gameName), NotificationType.Info);
                             logger.Info($"Offloader: {gameName} 后台推送成功。");
                         }
                         else
                         {
-                            PlayniteApi.Notifications.Add(gameId + "-push-bg", $"Offloader：{gameName} 后台推送失败（robocopy 退出码 {res.ExitCode}）。{OutputTail(res.Output)}", NotificationType.Error);
+                            PlayniteApi.Notifications.Add(gameId + "-push-bg", string.Format(ResourceProvider.GetString("LOCoffloaderNotifyBgFailed"), gameName, res.ExitCode, OutputTail(res.Output)), NotificationType.Error);
                         }
                     }
                     catch (OperationCanceledException)
                     {
                         PlayniteApi.Notifications.Remove(gameId + "-push-bg");
-                        PlayniteApi.Notifications.Add(gameId + "-push-bg-cancelled", $"Offloader：{gameName} 后台推送已取消，可改用立即推送。", NotificationType.Info);
+                        PlayniteApi.Notifications.Add(gameId + "-push-bg-cancelled", string.Format(ResourceProvider.GetString("LOCoffloaderNotifyBgCancelled"), gameName), NotificationType.Info);
                         logger.Info($"Offloader: {gameName} 后台推送已取消。");
                     }
                     catch (Exception ex)
                     {
                         logger.Error(ex, $"Offloader: 后台推送失败：{gameName}");
-                        PlayniteApi.Notifications.Add(gameId + "-push-bg", $"Offloader：{gameName} 后台推送失败：{ex.Message}", NotificationType.Error);
+                        PlayniteApi.Notifications.Add(gameId + "-push-bg", string.Format(ResourceProvider.GetString("LOCoffloaderNotifyPushFailed"), gameName, ex.Message), NotificationType.Error);
                     }
                     finally
                     {
@@ -593,7 +603,7 @@ namespace Offloader
             }
             if (count > 0)
             {
-                PlayniteApi.Notifications.Add("offloader-bg-cancel", $"Offloader：已取消 {count} 个后台推送，远端保留已传部分，下次推送断点续传。", NotificationType.Info);
+                PlayniteApi.Notifications.Add("offloader-bg-cancel", string.Format(ResourceProvider.GetString("LOCoffloaderNotifyBgCancelCount"), count), NotificationType.Info);
             }
         }
 
@@ -602,7 +612,7 @@ namespace Offloader
             var root = CurrentSettings.RemoteRoot?.Trim();
             if (string.IsNullOrEmpty(root))
             {
-                PlayniteApi.Dialogs.ShowErrorMessage("请先在 Offloader 设置中配置远端仓库目录（RemoteRoot）。");
+                PlayniteApi.Dialogs.ShowErrorMessage(ResourceProvider.GetString("LOCoffloaderMsgRemoteRootRequired"));
                 return false;
             }
             return true;
@@ -696,7 +706,7 @@ namespace Offloader
             var root = CurrentSettings.RemoteRoot?.Trim();
             if (string.IsNullOrEmpty(root))
             {
-                status = "未设置远端仓库目录。";
+                status = ResourceProvider.GetString("LOCoffloaderErrNoRemoteRoot");
                 return list;
             }
             List<Guid> ids = new List<Guid>();
@@ -705,7 +715,7 @@ namespace Offloader
             {
                 if (!Directory.Exists(root))
                 {
-                    scanError = "远端仓库目录不存在或不可达：" + root;
+                    scanError = string.Format(ResourceProvider.GetString("LOCoffloaderListStatusUnreachable"), root);
                 }
                 else
                 {
@@ -727,7 +737,7 @@ namespace Offloader
             }
             catch (Exception ex)
             {
-                scanError = "远端仓库不可达：" + ex.Message;
+                scanError = string.Format(ResourceProvider.GetString("LOCoffloaderListStatusUnreachable"), ex.Message);
             }
             if (scanError != null)
             {
@@ -758,10 +768,10 @@ namespace Offloader
                 list.Add(new EnrolledGameEntry
                 {
                     GameId = id,
-                    DisplayName = dbGame != null ? dbGame.Name : "未知游戏 (" + id + ")",
+                    DisplayName = dbGame != null ? dbGame.Name : string.Format(ResourceProvider.GetString("LOCoffloaderUnknownGame"), id),
                     IsOrphan = dbGame == null,
-                    RemoteState = !exists ? "缺失" : (hasData ? "有数据" : "空目录"),
-                    InstallState = dbGame == null ? "—" : (dbGame.IsInstalled ? "已安装" : "未安装"),
+                    RemoteState = !exists ? ResourceProvider.GetString("LOCoffloaderStateRemoteMissing") : (hasData ? ResourceProvider.GetString("LOCoffloaderStateRemoteHasData") : ResourceProvider.GetString("LOCoffloaderStateRemoteEmpty")),
+                    InstallState = dbGame == null ? "—" : (dbGame.IsInstalled ? ResourceProvider.GetString("LOCoffloaderStateInstalled") : ResourceProvider.GetString("LOCoffloaderStateNotInstalled")),
                     IsInstalled = dbGame?.IsInstalled ?? false,
                     LastPushText = snap?.LastPushUtc == null ? "—" : snap.LastPushUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm"),
                     LastPushSortKey = snap?.LastPushUtc == null ? long.MinValue : snap.LastPushUtc.Value.Ticks,
@@ -769,7 +779,7 @@ namespace Offloader
                 });
             }
             list.Sort((a, b) => string.Compare(a.DisplayName, b.DisplayName, StringComparison.OrdinalIgnoreCase));
-            status = scanError ?? ("共 " + list.Count + " 条已启用记录。");
+            status = scanError ?? string.Format(ResourceProvider.GetString("LOCoffloaderListStatusCount"), list.Count);
             return list;
         }
 
@@ -778,18 +788,18 @@ namespace Offloader
             error = null;
             if (!RequireRemoteRoot())
             {
-                error = "未设置远端仓库目录。";
+                error = ResourceProvider.GetString("LOCoffloaderErrNoRemoteRoot");
                 return false;
             }
             if (bgRunning.ContainsKey(gameId))
             {
-                error = "该游戏有后台推送在进行，请先取消后再移除。";
+                error = ResourceProvider.GetString("LOCoffloaderErrRemoveBgRunning");
                 return false;
             }
             var gate = gameLocks.GetOrAdd(gameId, _ => new SemaphoreSlim(1, 1));
             if (!gate.Wait(0))
             {
-                error = "该游戏有同步在进行，请稍后再试。";
+                error = ResourceProvider.GetString("LOCoffloaderErrRemoveBusy");
                 return false;
             }
             try

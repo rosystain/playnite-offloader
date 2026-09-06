@@ -1,4 +1,5 @@
 using Offloader.Models;
+using Playnite.SDK;
 using System;
 using System.Linq;
 using System.Windows;
@@ -35,7 +36,7 @@ namespace Offloader
             }
             catch (Exception ex)
             {
-                vm?.Plugin.PlayniteApi.Dialogs.ShowErrorMessage("刷新清单失败：\n" + ex.Message, "Offloader");
+                vm?.Plugin.PlayniteApi.Dialogs.ShowErrorMessage(ResourceProvider.GetString("LOCoffloaderListRefreshFailed") + "\n" + ex.Message, "Offloader");
             }
         }
 
@@ -49,12 +50,14 @@ namespace Offloader
             var selected = EnrolledList.SelectedItems.OfType<EnrolledGameEntry>().ToList();
             if (selected.Count == 0)
             {
-                vm.Plugin.PlayniteApi.Dialogs.ShowMessage("请先在清单中选择要移除的记录。", "Offloader");
+                vm.Plugin.PlayniteApi.Dialogs.ShowMessage(ResourceProvider.GetString("LOCoffloaderListRemoveSelectFirst"), "Offloader");
                 return;
             }
             var confirm = vm.Plugin.PlayniteApi.Dialogs.ShowMessage(
-                "确定删除以下 " + selected.Count + " 条远端记录吗？\n" + string.Join("\n", selected.Take(10).Select(s => "• " + s.DisplayName)) + (selected.Count > 10 ? "\n…" : "") + "\n\n将删除远端整个 GameId 目录并清状态，不可恢复。",
-                "Offloader 移除确认",
+                string.Format(ResourceProvider.GetString("LOCoffloaderListRemoveHead"), selected.Count)
+                + "\n" + string.Join("\n", selected.Take(10).Select(s => "• " + s.DisplayName)) + (selected.Count > 10 ? "\n…" : "")
+                + "\n\n" + ResourceProvider.GetString("LOCoffloaderListRemoveNote"),
+                ResourceProvider.GetString("LOCoffloaderListRemoveCaption"),
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
             if (confirm != MessageBoxResult.Yes)
@@ -67,7 +70,7 @@ namespace Offloader
             }
             catch (Exception ex)
             {
-                vm.Plugin.PlayniteApi.Dialogs.ShowErrorMessage("移除失败：\n" + ex.Message, "Offloader");
+                vm.Plugin.PlayniteApi.Dialogs.ShowErrorMessage(ResourceProvider.GetString("LOCoffloaderListRemoveFailed") + "\n" + ex.Message, "Offloader");
             }
         }
 

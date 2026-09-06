@@ -7,22 +7,15 @@
              d:DesignHeight="400" d:DesignWidth="600">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="8">
-            <TextBlock Text="远端仓库目录（RemoteRoot，按 GameId 存放，必填）:" FontWeight="Bold"/>
+            <TextBlock Text="{DynamicResource LOCoffloaderSetRemoteRootLabel}" FontWeight="Bold"/>
             <DockPanel Margin="0,4,0,0">
-                <Button Content="浏览…" Width="70" DockPanel.Dock="Right" Margin="6,0,0,0" Click="BrowseButton_Click"/>
-                <TextBox Text="{Binding Settings.RemoteRoot, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center"/>
+                <Button Content="{DynamicResource LOCoffloaderSetBrowse}" Width="70" DockPanel.Dock="Right" Margin="6,0,0,0" Click="BrowseButton_Click"/>
+                <TextBox Text="{Binding Settings.RemoteRoot, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center"
+                         ToolTip="{DynamicResource LOCoffloaderSetRemoteRootTooltip}"/>
             </DockPanel>
-            <TextBlock Text="示例：\\NAS\games\Offloader 或 D:\GameArchive。释放后本地整个目录会被删除，远端保留唯一副本，请务必确认该路径有备份/冗余。"
-                       TextWrapping="Wrap" Opacity="0.7" Margin="0,4,0,0"/>
 
-            <TextBlock Text="同步均为多线程全速（前台 /MT:16，后台 /MT:8 + 低进程优先级让行，不限速，推送永不删除远端）:" TextWrapping="Wrap" Opacity="0.7" Margin="0,12,0,0"/>
-
-            <TextBlock Text="已启用清单（远端存在 GameId 目录即算启用，空目录也算，靠下次推送自愈）:" FontWeight="Bold" Margin="0,12,0,0" TextWrapping="Wrap"/>
-            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                <Button Content="管理已启用清单…" Width="150" Click="OpenEnrolled_Click"/>
-                <Button Content="刷新状态" Width="80" Margin="6,0,0,0" Click="RefreshEnrolled_Click"/>
-            </StackPanel>
-            <TextBlock Text="{Binding EnrolledStatus}" Opacity="0.7" Margin="0,4,0,0" TextWrapping="Wrap"/>
+            <TextBlock Text="{DynamicResource LOCoffloaderSetEnrolledTitle}" FontWeight="Bold" Margin="0,12,0,0"/>
+            <Button Content="{DynamicResource LOCoffloaderSetManageEnrolled}" Width="150" HorizontalAlignment="Left" Margin="0,4,0,0" Click="OpenEnrolled_Click"/>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

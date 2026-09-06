@@ -1,3 +1,4 @@
+using Playnite.SDK;
 using Playnite.SDK.Events;
 using Playnite.SDK.Plugins;
 using System;
@@ -11,7 +12,7 @@ namespace Offloader
         public OffloaderInstallController(Offloader plugin, Playnite.SDK.Models.Game game) : base(game)
         {
             this.plugin = plugin ?? throw new ArgumentNullException(nameof(plugin));
-            Name = "从 Offloader 仓库恢复";
+            Name = ResourceProvider.GetString("LOCoffloaderInstallRestore");
         }
 
         public override void Install(InstallActionArgs args)
@@ -36,7 +37,7 @@ namespace Offloader
             }
             catch (Exception ex)
             {
-                plugin.ReportError("从 Offloader 仓库恢复失败：\n" + ex.Message);
+                plugin.ReportError(ResourceProvider.GetString("LOCoffloaderErrRestoreFailed") + "\n" + ex.Message);
                 InvokeOnInstallationCancelled(new GameInstallationCancelledEventArgs());
             }
         }

@@ -2,4 +2,120 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
+    <!-- 右键菜单（位于 Offloader 分组下，不带插件名前缀） -->
+    <sys:String x:Key="LOCoffloaderMenuEnable">Enable sync</sys:String>
+    <sys:String x:Key="LOCoffloaderMenuPushNow">Push to remote now</sys:String>
+    <sys:String x:Key="LOCoffloaderMenuCancelBgPush">Cancel background push</sys:String>
+    <sys:String x:Key="LOCoffloaderMenuOffload">Free local space</sys:String>
+    <sys:String x:Key="LOCoffloaderMenuOpenRemote">Open remote folder</sys:String>
+
+    <!-- 安装动作 -->
+    <sys:String x:Key="LOCoffloaderInstallRestore">Restore from Offloader</sys:String>
+
+    <!-- 通知 -->
+    <sys:String x:Key="LOCoffloaderNotifyEnabled">Sync enabled for {0} game(s). Background push started.</sys:String>
+    <sys:String x:Key="LOCoffloaderNotifySkippedBusy">{0}: another sync is already running; this operation was skipped.</sys:String>
+    <sys:String x:Key="LOCoffloaderNotifyPushFailed">{0}: push failed. {1}</sys:String>
+    <sys:String x:Key="LOCoffloaderNotifyOffloadFailed">{0}: offload failed. {1}</sys:String>
+    <sys:String x:Key="LOCoffloaderNotifyRemoteMissing">{0}: remote folder does not exist.</sys:String>
+    <sys:String x:Key="LOCoffloaderNotifyBgStarted">{0}: background push in progress…</sys:String>
+    <sys:String x:Key="LOCoffloaderNotifyBgDone">{0}: background push completed.</sys:String>
+    <sys:String x:Key="LOCoffloaderNotifyBgFailed">{0}: background push failed (robocopy exit code {1}).{2}</sys:String>
+    <sys:String x:Key="LOCoffloaderNotifyBgCancelled">{0}: background push cancelled. You can push manually.</sys:String>
+    <sys:String x:Key="LOCoffloaderNotifyBgCancelCount">Cancelled {0} background push(es). Transferred files remain on the remote; the next push resumes from them.</sys:String>
+
+    <!-- 进度框 -->
+    <sys:String x:Key="LOCoffloaderProgPushCaption">Offloader: pushing…</sys:String>
+    <sys:String x:Key="LOCoffloaderProgPushing">Pushing: {0}</sys:String>
+    <sys:String x:Key="LOCoffloaderProgOffloadCaption">Offloader: offloading…</sys:String>
+    <sys:String x:Key="LOCoffloaderProgFinalPush">Final push: {0}</sys:String>
+    <sys:String x:Key="LOCoffloaderProgDeleting">Deleting local files: {0}</sys:String>
+    <sys:String x:Key="LOCoffloaderProgRestoreCaption">Offloader: restoring {0}</sys:String>
+    <sys:String x:Key="LOCoffloaderProgRestoring">Restoring: {0}</sys:String>
+
+    <!-- 对话框（多行文本由代码以 \n 拼接，资源保持单行） -->
+    <sys:String x:Key="LOCoffloaderDlgOffloadCaption">Offloader: confirm offload</sys:String>
+    <sys:String x:Key="LOCoffloaderDlgOffloadHead">Free local files for the following {0} game(s)?</sys:String>
+    <sys:String x:Key="LOCoffloaderDlgOffloadNote">Offloader will do a final push and verify the remote copy first; the local folder is deleted only after verification passes, and the game is marked as not installed.</sys:String>
+    <sys:String x:Key="LOCoffloaderDlgRestoreCaption">Offloader: confirm restore</sys:String>
+    <sys:String x:Key="LOCoffloaderDlgRestoreHead">Restore the following game from the Offloader repository?</sys:String>
+    <sys:String x:Key="LOCoffloaderDlgRestoreNote">Restoring occupies local disk space; the game will be marked as installed when done.</sys:String>
+    <sys:String x:Key="LOCoffloaderFmtGame">Game: {0}</sys:String>
+    <sys:String x:Key="LOCoffloaderFmtRemote">Remote: {0}</sys:String>
+    <sys:String x:Key="LOCoffloaderFmtRemoteData">Remote data: {0}</sys:String>
+    <sys:String x:Key="LOCoffloaderFmtRestoreTo">Restore to: {0}</sys:String>
+    <sys:String x:Key="LOCoffloaderRemoteStats">{0} file(s), {1}</sys:String>
+    <sys:String x:Key="LOCoffloaderFmtNamedError">{0}: {1}</sys:String>
+    <sys:String x:Key="LOCoffloaderRemoteStatsUnavailable">Remote statistics unavailable (you can still continue).</sys:String>
+
+    <!-- 提示与错误（以冒号结尾的条目，代码在其后追加 "\n" + 详情） -->
+    <sys:String x:Key="LOCoffloaderMsgNoPushable">No games to push. A game must be enrolled, installed, and have a local folder.</sys:String>
+    <sys:String x:Key="LOCoffloaderMsgNoPushableBg">No games to push. Games must be installed and have a local folder.</sys:String>
+    <sys:String x:Key="LOCoffloaderMsgRemoteRootRequired">Please configure the remote repository folder in Offloader settings first.</sys:String>
+    <sys:String x:Key="LOCoffloaderMsgOpenRemoteFailed">Failed to open remote folder:</sys:String>
+    <sys:String x:Key="LOCoffloaderErrRobocopyExit">robocopy exit code {0} (8 or higher means failure).{1}</sys:String>
+    <sys:String x:Key="LOCoffloaderErrFinalPushFailed">Final push failed (robocopy exit code {0}); local files were kept.{1}</sys:String>
+    <sys:String x:Key="LOCoffloaderErrRemoteVerify">Remote verification failed (remote folder empty or unreachable); local files were kept.</sys:String>
+    <sys:String x:Key="LOCoffloaderErrLocalPathEmpty">Local path is empty; aborted to prevent accidental deletion.</sys:String>
+    <sys:String x:Key="LOCoffloaderErrNoRemoteRoot">Remote repository folder is not set.</sys:String>
+    <sys:String x:Key="LOCoffloaderErrNoRemoteData">No remote data for this game: {0}</sys:String>
+    <sys:String x:Key="LOCoffloaderErrRestoreTargetEmpty">Restore target path is empty; aborted to prevent accidental writes.</sys:String>
+    <sys:String x:Key="LOCoffloaderErrRestoreFailed">Restore from Offloader failed:</sys:String>
+    <sys:String x:Key="LOCoffloaderErrRemoveBgRunning">A background push is running for this game; cancel it before removing.</sys:String>
+    <sys:String x:Key="LOCoffloaderErrRemoveBusy">A sync is running for this game; try again later.</sys:String>
+    <sys:String x:Key="LOCoffloaderErrArgRemoteEmpty">Remote path is empty.</sys:String>
+    <sys:String x:Key="LOCoffloaderErrArgLocalEmpty">Local path is empty.</sys:String>
+    <sys:String x:Key="LOCoffloaderErrLocalDirMissing">Local game folder does not exist: {0}</sys:String>
+    <sys:String x:Key="LOCoffloaderErrRemoteMissing">Remote repository does not exist: {0}</sys:String>
+    <sys:String x:Key="LOCoffloaderErrRobocopyStart">Failed to start robocopy: {0}</sys:String>
+
+    <!-- 同步引擎进度行 -->
+    <sys:String x:Key="LOCoffloaderSyncSyncing">Syncing…</sys:String>
+    <sys:String x:Key="LOCoffloaderSyncAvgSpeed">Average speed {0:F1} MB/s</sys:String>
+
+    <!-- 设置页 -->
+    <sys:String x:Key="LOCoffloaderSetRemoteRootLabel">Remote repository folder (required; one folder per game ID):</sys:String>
+    <sys:String x:Key="LOCoffloaderSetBrowse">Browse…</sys:String>
+    <sys:String x:Key="LOCoffloaderSetRemoteRootTooltip">Examples: \\NAS\games\Offloader or D:\GameArchive. Offloading deletes the whole local folder, so keep this path backed up or redundant. Syncs run at full multi-threaded speed (foreground /MT:16; background /MT:8 at low process priority); pushes never delete remote files.</sys:String>
+    <sys:String x:Key="LOCoffloaderSetEnrolledTitle">Enrolled games</sys:String>
+    <sys:String x:Key="LOCoffloaderSetManageEnrolled">Manage enrolled games…</sys:String>
+    <sys:String x:Key="LOCoffloaderBrowseDialogTitle">Select the Offloader remote repository folder</sys:String>
+    <sys:String x:Key="LOCoffloaderVerifyRootRequired">Remote repository folder is required, e.g. \\NAS\games\Offloader or D:\GameArchive.</sys:String>
+    <sys:String x:Key="LOCoffloaderVerifyRootAbsolute">Remote repository folder must be an absolute path.</sys:String>
+    <sys:String x:Key="LOCoffloaderVerifyRootInvalid">Remote repository folder is invalid: {0}</sys:String>
+
+    <!-- 已启用清单弹窗 -->
+    <sys:String x:Key="LOCoffloaderListWindowTitle">Offloader: enrolled games</sys:String>
+    <sys:String x:Key="LOCoffloaderListStatusCount">{0} game(s) enrolled</sys:String>
+    <sys:String x:Key="LOCoffloaderListStatusUnreachable">Remote repository unreachable, showing local records: {0}</sys:String>
+    <sys:String x:Key="LOCoffloaderListRefresh">Refresh</sys:String>
+    <sys:String x:Key="LOCoffloaderListRefreshFailed">Failed to refresh the list:</sys:String>
+    <sys:String x:Key="LOCoffloaderListOpenFailed">Failed to open the list:</sys:String>
+    <sys:String x:Key="LOCoffloaderListSearchHint">Search game names or IDs…</sys:String>
+    <sys:String x:Key="LOCoffloaderListSearchTooltip">Filter by game name or ID</sys:String>
+    <sys:String x:Key="LOCoffloaderListSortLabel">Sort:</sys:String>
+    <sys:String x:Key="LOCoffloaderListSortName">Name</sys:String>
+    <sys:String x:Key="LOCoffloaderListSortLastPush">Last push</sys:String>
+    <sys:String x:Key="LOCoffloaderListSortInstall">Install state</sys:String>
+    <sys:String x:Key="LOCoffloaderListSortAsc">Asc ▴</sys:String>
+    <sys:String x:Key="LOCoffloaderListSortDesc">Desc ▾</sys:String>
+    <sys:String x:Key="LOCoffloaderListSortToggle">Toggle sort direction</sys:String>
+    <sys:String x:Key="LOCoffloaderListColGame">Game</sys:String>
+    <sys:String x:Key="LOCoffloaderListColLocalPath">Local path</sys:String>
+    <sys:String x:Key="LOCoffloaderListRemoveSelected">Remove selected records</sys:String>
+    <sys:String x:Key="LOCoffloaderListRemoveSelectFirst">Select the records to remove first.</sys:String>
+    <sys:String x:Key="LOCoffloaderListRemoveCaption">Offloader: confirm removal</sys:String>
+    <sys:String x:Key="LOCoffloaderListRemoveHead">Remove the following {0} record(s)?</sys:String>
+    <sys:String x:Key="LOCoffloaderListRemoveNote">The remote folders and sync records will be deleted permanently. This cannot be undone.</sys:String>
+    <sys:String x:Key="LOCoffloaderListRemoveDone">Removed {0} record(s).</sys:String>
+    <sys:String x:Key="LOCoffloaderListRemovePartial">Some records could not be removed:</sys:String>
+    <sys:String x:Key="LOCoffloaderListRemoveFailed">Remove failed:</sys:String>
+    <sys:String x:Key="LOCoffloaderListClose">Close</sys:String>
+    <sys:String x:Key="LOCoffloaderUnknownGame">Unknown game ({0})</sys:String>
+    <sys:String x:Key="LOCoffloaderStateInstalled">Installed</sys:String>
+    <sys:String x:Key="LOCoffloaderStateNotInstalled">Not installed</sys:String>
+    <sys:String x:Key="LOCoffloaderStateRemoteMissing">Missing</sys:String>
+    <sys:String x:Key="LOCoffloaderStateRemoteHasData">Has data</sys:String>
+    <sys:String x:Key="LOCoffloaderStateRemoteEmpty">Empty folder</sys:String>
+
 </ResourceDictionary>
