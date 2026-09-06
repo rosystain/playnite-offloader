@@ -1,0 +1,63 @@
+name: publish-manifest
+# Release 发布/编辑后，由正文与真实资产 URL 生成/刷新 manifest.yaml 首条（结构上保证 PackageUrl 永不指向 404）
+on:
+  release:
+    types: [published, edited]
+
+permissions:
+  contents: write
+
+jobs:
+  manifest:
+    if: github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Pick pext asset
+        id: pick
+        shell: pwsh
+        env:
+          ASSETS: ${{ toJSON(github.event.release.assets) }}
+        run: |
+          $assets = @(($env:ASSETS | ConvertFrom-Json) | Where-Object { $_.name -like '*.pext' })
+          if ($assets.Count -lt 1) { Write-Error 'Release 未上传 .pext 资产，manifest 不更新'; exit 1 }
+          if ($assets.Count -gt 1) { Write-Warning ("多个 pext 资产，取第一个: " + (($assets.name) -join ', ')) }
+          "url=$($assets[0].browser_download_url)" >> $env:GITHUB_OUTPUT
+
+      - name: extension.yaml at release tag
+        shell: bash
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          git fetch --depth=1 origin "refs/tags/$TAG"
+          git show "FETCH_HEAD:extension.yaml" > .release-extension.yaml
+
+      - name: Update manifest.yaml
+        shell: pwsh
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          URL: ${{ steps.pick.outputs.url }}
+          BODY: ${{ github.event.release.body }}
+          DATE: ${{ github.event.release.published_at }}
+          REQUIRED_API: '6.14.0'   # 与 release.ps1 顶部常量保持同步（SDK 成员下限上调时改两处）
+        run: |
+          ./update-manifest.ps1 -Tag $env:TAG -AssetUrl $env:URL -Body $env:BODY `
+            -ReleaseDate $env:DATE -RequiredApiVersion $env:REQUIRED_API `
+            -ExtensionPath .release-extension.yaml -Repo '${{ github.repository }}'
+
+      - name: Commit & push
+        shell: bash
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          rm -f .release-extension.yaml
+          # 注意：首次发布时 manifest.yaml 是 CI 新建的未跟踪文件，git diff 看不到，必须用 status --porcelain
+          if [ -z "$(git status --porcelain -- manifest.yaml)" ]; then echo "manifest 无变化，跳过提交"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manifest.yaml
+          git commit -m "chore(release): manifest $TAG [skip ci]"
+          git push origin HEAD:main

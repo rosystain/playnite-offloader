@@ -36,15 +36,13 @@
 
 ### 安装与配置
 
-1. 下载 Release 发行包（包含 `Offloader.dll`、`extension.yaml`、`icon.png` 及 `Localization/`）。
+1. 到本仓库 **Releases** 页下载最新的 `Offloader_…_x_y.pext`，直接**拖入 Playnite 桌面窗口**即可安装（Playnite 9/10 支持；仅认 `.pext` 后缀）。
 
-2. **完全退出 Playnite**（确保系统托盘图标已退出，防止 DLL 文件被锁定）。
+   备选：`.pext` 实为 zip，可改后缀后解压至 `Playnite\Extensions\Offloader_5180751b-c8af-41cf-b9de-76253984e71c\`。
 
-3. 将文件解压至扩展目录：
+2. **升级时须完全退出 Playnite**（确保系统托盘图标已退出，防止 DLL 文件被锁定），再拖入新版 pext 覆盖（或手动解压覆盖）。
 
-   `Playnite\Extensions\Offloader_5180751b-c8af-41cf-b9de-76253984e71c\`
-
-4. 启动 Playnite，进入 **设置 → 附加组件 → Offloader** 配置远端根目录（Remote Root）。
+3. 启动 Playnite，进入 **设置 → 附加组件 → Offloader** 配置远端根目录（Remote Root）。
 
 ### 传输机制与容灾设计
 
@@ -112,15 +110,13 @@ Offloader 为纯本地工具，不包含任何外网连接或遥测。插件运�
 
 ### Installation & Setup
 
-1. Download the latest release package (`Offloader.dll`, `extension.yaml`, `icon.png`, and `Localization/`).
+1. Download the latest `Offloader_…_x_y.pext` from this repo's **Releases** page and simply **drag it into the Playnite desktop window** to install (supported on Playnite 9/10; only the `.pext` extension is accepted).
 
-2. **Exit Playnite completely** (including the system tray icon to prevent DLL file locks).
+   Alternative: a `.pext` is a plain zip — rename it to `.zip` and extract into `Playnite\Extensions\Offloader_5180751b-c8af-41cf-b9de-76253984e71c\`.
 
-3. Extract the assets into:
+2. **When upgrading, exit Playnite completely** (including the system tray icon, to prevent DLL file locks) before dropping in the new pext (or extracting over the old files).
 
-   `Playnite\Extensions\Offloader_5180751b-c8af-41cf-b9de-76253984e71c\`
-
-4. Launch Playnite, then navigate to **Settings → Add-ons → Offloader** to configure the Remote Root path.
+3. Launch Playnite, then navigate to **Settings → Add-ons → Offloader** to configure the Remote Root path.
 
 ### Transmission Architecture & Reliability
 

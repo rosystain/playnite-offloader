@@ -30,7 +30,11 @@ Playnite 6 通用插件（GenericPlugin），给“不舍得删游戏但 SSD 吃
 | `Services/RobocopyPresets.cs` | **robocopy 参数唯一真相源**（三组预设，README 参数表同步自此处） |
 | `Services/RobocopySyncService.cs` | robocopy 封装（拉取/推送/远端校验） |
 | `README.md` | 中英双语用户文档（功能 + robocopy 专题） |
-| `extension.yaml` | 扩展清单（Id 含 GUID，后缀即实例标识） |
+| `extension.yaml` | 扩展清单（Id 含 GUID，后缀即实例标识；Version 是发版唯一真相源，决定 pext 包名） |
+| `manifest.yaml` | 官方插件中心安装包清单（AddonId + 累积 Packages 列表）：**由 CI 维护，人不手改，本地首次发布前不存在此文件**（Publish 后由 update-manifest.ps1 新建/前插，git pull 同步）；不预写种子是为了消灭「manifest 先于 Release 存在」的 404 窗口 |
+| `update-manifest.ps1` | CI 侧生成器（纯参数化，本地可手调排障）：Release tag/资产真实 URL/正文 bullet → manifest 首条；校验 tag↔extension 版本、包名、URL 前缀；同版本=整条替换（幂等） |
+| `release.ps1` | 本地构建打包脚本（WinPS 5.1/pwsh 7，零依赖）：预检（干净/HEAD 已含新 Version/远端无同名 tag；`-AllowDirty` 仅供演练）→ vswhere 定位 MSBuild → 白名单打包 pext+包内审查 → 打开预填草稿页并打印网页/CI 步骤指引 |
+| `.github/workflows/publish-manifest.yml` | release published/edited 触发（prerelease 跳过）：ubuntu-latest + pwsh 步骤调 update-manifest.ps1，变更则机器人 commit 推回 main；需仓库 Actions 权限「Read and write」 |
 | `Localization/en_US.xaml` | 英文基线文案（98 个 `LOCoffloader*` key，唯一真相源） |
 | `Localization/zh_CN.xaml` | 中文文案（key/占位符必须与 en_US 逐项对齐） |
 | `packages/PlayniteSDK.6.15.0/` | SDK（已提交，无需还原即可构建） |
@@ -49,7 +53,24 @@ Playnite 6 通用插件（GenericPlugin），给“不舍得删游戏但 SSD 吃
 - 必须用 VS 的 MSBuild（`.../MSBuild/Current/Bin/MSBuild.exe`），`dotnet msbuild` 编不过 WPF XAML。
 - 配置：Debug/Release 均可；产物取 `Offloader.dll`、`extension.yaml`、`icon.png`、`Localization/` 四项（不要拷 `Playnite.SDK.dll`/`pdb`）。
 - 安装：拷到 `Playnite/Extensions/Offloader_5180751b-c8af-41cf-b9de-76253984e71c/`，**完全退出 Playnite（含托盘）后再覆盖更新**，否则 DLL 被锁构建失败。
-- 本机 Playnite 在 `C:/Portable/Playnite`（便携版），扩展数据在 `ExtensionsData/5180751b-…/`。
+- 本机 Playnite 在 `C:/Portable/Playnite`（便携版，实为 v10.56，兼容加载 6.x 插件），扩展数据在 `ExtensionsData/5180751b-…/`。
+
+### 发布流程（Release 先行，manifest 由 CI 后置生成；.pext 就是裸 zip，Toolbox 已弃用）
+
+实测确认：Toolbox pack 产物无任何额外元数据，与自制 zip 完全等价；但 Playnite 拖拽安装**只认 `.pext` 后缀**，包名约定 `{Id}_{Version点→下划线}.pext` 维持（CI 按此核对资产名）。
+
+顺序设防：manifest 只会在 Release（含真实资产）已存在后才更新，**PackageUrl 结构上不可能指向 404**；中途放弃发布/漏传资产只会让 manifest 停在旧版，无需回滚。
+
+每次发版：
+1. 本地：改代码 + bump `extension.yaml` Version → commit + push main；
+2. 本地：`powershell -File release.ps1` → 校验/构建/打包，自动打开预填 tag/标题的草稿页；
+3. 网页：正文写顶层 `- ` bullet（**逐条即 Changelog，用户可见更新说明的唯一来源**）→ 上传 pext（**勿改名**）→ Publish；
+4. CI：`publish-manifest.yml` 自动生成/刷新 manifest 首条并推回 main（edited 事件可修正正文后刷新同版本条目；prerelease 跳过）；
+5. 本地：`git pull` 同步 manifest，闭环完成。
+
+一次性前置：仓库 Settings→Actions→Workflow permissions 若为只读需改「Read and write」；首次 Release 后向官方库（PlayniteAddonLibrary）提 PR 收录 `https://raw.githubusercontent.com/rosystain/playnite-offloader/main/manifest.yaml`。
+
+`RequiredApiVersion` 实测下限为 **6.14.0**（nuget 历史 SDK 逐版本 diff：GenericPlugin/InstallController 系 6.0.0，ShowErrorMessage 单参重载 6.3.0，`InvokeOnInstallationCancelled` 6.14.0 新增且在用）。若用上更新 SDK 成员须同步上调 release.ps1 常量与 workflow env `REQUIRED_API` 两处。
 
 ## 5. 踩坑记录（血泪，勿重蹈）
 
@@ -64,6 +85,9 @@ Playnite 6 通用插件（GenericPlugin），给“不舍得删游戏但 SSD 吃
 5. **bash 里跑 powershell 时 `$_` 会被 bash 展开**，涉及 `$` 的命令一律写成 `.ps1` 文件再 `-File` 执行，用完即删。
 6. `robocopy` 成功判定是 **`ExitCode < 8`**（0–7 都是成功），不要按 0 判断。
 7. **`/XO` 的半截文件陷阱（发布前实测确认）**：推送中途被杀会留下时间戳新于源文件的半截目标文件，此后每次 `/XO` 推送都会跳过它，远端静默残留损坏文件。拉取方向无 `/XO` 不受影响。未用 `/Z`（局域网收益小、拉低吞吐），已在 README 如实记录，不要当 bug 修。
+8. **含中文的 .ps1 必须存为 UTF-8 with BOM**。WinPS 5.1 对无 BOM 文件按 GBK 解码：轻则字符串乱码，重则多字节尾字节吞掉下一个 ASCII 字符导致花括号失配、语法报错。用编辑工具写完一律复查 BOM（`release.ps1`/`update-manifest.ps1` 均已带）。
+9. **PS 5.1 两个小坑**：① `Compress-Archive` 写目录条目用反斜杠（`Localization\x.xaml`），违反 zip 规范，打包一律用 `[IO.Compression.ZipFile]` 显式指定 '/' 条目名；② 原生命令无输出时 `[string](& cmd)` 结果是 **$null 而非 ''**（实测复现），后续 `.Trim()` 直接炸——用 `'' + (& cmd)` 或真值判断，勿链式方法调用。另：`git ls-remote` 无匹配时退出码非 0，EAP=Stop 下需局部降级包裹。
+10. **`$Seed` 是 PowerShell 只读自动变量**，脚本里赋普通局部变量同名会静默失败（实测坑过测试 harness）。
 
 ## 6. 本地化约定（二期首轮已落地，新 UI 文本必须遵守）
 
