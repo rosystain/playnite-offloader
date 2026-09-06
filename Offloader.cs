@@ -378,7 +378,7 @@ namespace Offloader
 
         #region 恢复（供 InstallController 与潜在右键入口复用）
 
-        internal void RestoreGameBlocking(Game game, Playnite.SDK.GlobalProgressActionArgs progress)
+        internal void RestoreGameWithForeground(Game game)
         {
             if (game == null)
             {
@@ -388,13 +388,24 @@ namespace Offloader
             {
                 throw new InvalidOperationException("未设置远端仓库目录。");
             }
-            var pullArgs = RobocopyPresets.GetPullArgs(CurrentSettings.PullSpeed);
             var remote = SyncStateStore.GetRemotePath(CurrentSettings.RemoteRoot, game.Id);
             if (!sync.RemoteHasData(remote))
             {
                 throw new DirectoryNotFoundException("远端仓库无此游戏数据：" + remote);
             }
+            // 目标解析可能弹 SelectFolder，必须在进度框之前完成，避免被进度框盖住
+            var target = ResolveRestoreTarget(game);
+            if (!ConfirmRestore(game, remote, target))
+            {
+                throw new OperationCanceledException();
+            }
+            PlayniteApi.Dialogs.ActivateGlobalProgress(
+                progress => RestoreToTarget(game, target, progress),
+                new GlobalProgressOptions($"Offloader 恢复中：{game.Name}", true) { IsIndeterminate = true });
+        }
 
+        internal string ResolveRestoreTarget(Game game)
+        {
             // 目标：DB 当前值 → 状态快照 → 用户重选
             string target = null;
             try
@@ -430,7 +441,87 @@ namespace Offloader
                     target = picked.Trim();
                 }
             }
+            return target;
+        }
 
+        internal bool ConfirmRestore(Game game, string remote, string target)
+        {
+            long files;
+            long bytes;
+            var ok = sync.TryGetRemoteStats(remote, out files, out bytes);
+            var stats = ok ? string.Format("{0} 个文件，共 {1}", files, FormatBytes(bytes)) : "远端统计失败（仍可继续）";
+            var choice = PlayniteApi.Dialogs.ShowMessage(
+                string.Format("确定从 Offloader 仓库恢复以下游戏吗？\n\n游戏：{0}\n远端：{1}\n远端数据：{2}\n恢复到：{3}\n\n恢复将占用本地磁盘，完成后标记为已安装。", game.Name, remote, stats, target),
+                "Offloader 恢复确认",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+            return choice == MessageBoxResult.Yes;
+        }
+
+        internal static string FormatBytes(long bytes)
+        {
+            const double kb = 1024.0;
+            const double mb = kb * 1024.0;
+            const double gb = mb * 1024.0;
+            const double tb = gb * 1024.0;
+            if (bytes < 0)
+            {
+                return "—";
+            }
+            if (bytes < kb)
+            {
+                return bytes + " B";
+            }
+            if (bytes < mb)
+            {
+                return string.Format("{0:F1} KB", bytes / kb);
+            }
+            if (bytes < gb)
+            {
+                return string.Format("{0:F1} MB", bytes / mb);
+            }
+            if (bytes < tb)
+            {
+                return string.Format("{0:F1} GB", bytes / gb);
+            }
+            return string.Format("{0:F2} TB", bytes / tb);
+        }
+
+        internal void RestoreGameBlocking(Game game, Playnite.SDK.GlobalProgressActionArgs progress)
+        {
+            if (game == null)
+            {
+                throw new ArgumentNullException(nameof(game));
+            }
+            if (!RequireRemoteRoot())
+            {
+                throw new InvalidOperationException("未设置远端仓库目录。");
+            }
+            var remote = SyncStateStore.GetRemotePath(CurrentSettings.RemoteRoot, game.Id);
+            if (!sync.RemoteHasData(remote))
+            {
+                throw new DirectoryNotFoundException("远端仓库无此游戏数据：" + remote);
+            }
+            var target = ResolveRestoreTarget(game);
+            RestoreToTarget(game, target, progress);
+        }
+
+        internal void RestoreToTarget(Game game, string target, Playnite.SDK.GlobalProgressActionArgs progress)
+        {
+            if (game == null)
+            {
+                throw new ArgumentNullException(nameof(game));
+            }
+            if (string.IsNullOrWhiteSpace(target))
+            {
+                throw new InvalidOperationException("恢复目标路径为空，为防止误写已中止。");
+            }
+            var pullArgs = RobocopyPresets.GetPullArgs(CurrentSettings.PullSpeed);
+            var remote = SyncStateStore.GetRemotePath(CurrentSettings.RemoteRoot, game.Id);
+            if (!sync.RemoteHasData(remote))
+            {
+                throw new DirectoryNotFoundException("远端仓库无此游戏数据：" + remote);
+            }
             var gate = gameLocks.GetOrAdd(game.Id, _ => new SemaphoreSlim(1, 1));
             gate.Wait(progress?.CancelToken ?? CancellationToken.None);
             try

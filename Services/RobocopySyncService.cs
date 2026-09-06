@@ -109,6 +109,39 @@ namespace Offloader.Services
             }
         }
 
+        /// <summary>
+        /// 统计远端文件数与总字节数（供恢复确认框展示）。失败返回 false，调用方显示兜底文案仍可继续。
+        /// </summary>
+        public bool TryGetRemoteStats(string remotePath, out long fileCount, out long totalBytes)
+        {
+            fileCount = 0;
+            totalBytes = 0;
+            try
+            {
+                if (string.IsNullOrWhiteSpace(remotePath) || !Directory.Exists(remotePath))
+                {
+                    return false;
+                }
+                foreach (var file in Directory.EnumerateFiles(remotePath, "*", SearchOption.AllDirectories))
+                {
+                    try
+                    {
+                        fileCount++;
+                        totalBytes += new FileInfo(file).Length;
+                    }
+                    catch
+                    {
+                    }
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Offloader: 统计远端数据失败：" + remotePath);
+                return false;
+            }
+        }
+
         private RobocopyResult Run(string source, string dest, string extraArgs, CancellationToken cancelToken, bool lowPriority, Action<string> onProgress)
         {
             var args = string.Format("\"{0}\" \"{1}\" {2}", source.TrimEnd('\\'), dest.TrimEnd('\\'), extraArgs ?? string.Empty);

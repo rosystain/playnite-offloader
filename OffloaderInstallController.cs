@@ -18,7 +18,16 @@ namespace Offloader
         {
             try
             {
-                plugin.RestoreGameBlocking(Game, null);
+                // Install 可能在后台线程回调，确认框/选目录/全局进度必须在 UI 线程弹
+                var dispatcher = plugin.PlayniteApi?.MainView?.UIDispatcher;
+                if (dispatcher != null && !dispatcher.CheckAccess())
+                {
+                    dispatcher.Invoke(() => plugin.RestoreGameWithForeground(Game));
+                }
+                else
+                {
+                    plugin.RestoreGameWithForeground(Game);
+                }
                 InvokeOnInstalled(new GameInstalledEventArgs());
             }
             catch (OperationCanceledException)
