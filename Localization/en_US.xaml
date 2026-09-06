@@ -77,16 +77,16 @@
     <sys:String x:Key="LOCoffloaderSetRemoteRootLabel">Remote repository folder (required; one folder per game ID):</sys:String>
     <sys:String x:Key="LOCoffloaderSetBrowse">Browse…</sys:String>
     <sys:String x:Key="LOCoffloaderSetRemoteRootTooltip">Examples: \\NAS\games\Offloader or D:\GameArchive. Offloading deletes the whole local folder, so keep this path backed up or redundant. Syncs run at full multi-threaded speed (foreground /MT:16; background /MT:8 at low process priority); pushes never delete remote files.</sys:String>
-    <sys:String x:Key="LOCoffloaderSetEnrolledTitle">Enrolled games</sys:String>
-    <sys:String x:Key="LOCoffloaderSetManageEnrolled">Manage enrolled games…</sys:String>
+    <sys:String x:Key="LOCoffloaderSetEnrolledTitle">Linked games</sys:String>
+    <sys:String x:Key="LOCoffloaderSetManageEnrolled">Manage linked games…</sys:String>
     <sys:String x:Key="LOCoffloaderBrowseDialogTitle">Select the Offloader remote repository folder</sys:String>
     <sys:String x:Key="LOCoffloaderVerifyRootRequired">Remote repository folder is required, e.g. \\NAS\games\Offloader or D:\GameArchive.</sys:String>
     <sys:String x:Key="LOCoffloaderVerifyRootAbsolute">Remote repository folder must be an absolute path.</sys:String>
     <sys:String x:Key="LOCoffloaderVerifyRootInvalid">Remote repository folder is invalid: {0}</sys:String>
 
-    <!-- 已启用清单弹窗 -->
-    <sys:String x:Key="LOCoffloaderListWindowTitle">Offloader: enrolled games</sys:String>
-    <sys:String x:Key="LOCoffloaderListStatusCount">{0} game(s) enrolled</sys:String>
+    <!-- Linked games list dialog -->
+    <sys:String x:Key="LOCoffloaderListWindowTitle">Offloader: linked games</sys:String>
+    <sys:String x:Key="LOCoffloaderListStatusCount">{0} game(s) linked</sys:String>
     <sys:String x:Key="LOCoffloaderListStatusUnreachable">Remote repository unreachable, showing local records: {0}</sys:String>
     <sys:String x:Key="LOCoffloaderListRefresh">Refresh</sys:String>
     <sys:String x:Key="LOCoffloaderListRefreshFailed">Failed to refresh the list:</sys:String>

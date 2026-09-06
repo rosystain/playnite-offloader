@@ -77,16 +77,16 @@
     <sys:String x:Key="LOCoffloaderSetRemoteRootLabel">远端仓库目录（必填，按游戏 ID 存放）：</sys:String>
     <sys:String x:Key="LOCoffloaderSetBrowse">浏览…</sys:String>
     <sys:String x:Key="LOCoffloaderSetRemoteRootTooltip">示例：\\NAS\games\Offloader 或 D:\GameArchive。释放会删除本地整个目录，请务必确保该路径有备份/冗余。同步恒为多线程全速（前台 /MT:16，后台 /MT:8 + 低进程优先级让行），推送永不删除远端文件。</sys:String>
-    <sys:String x:Key="LOCoffloaderSetEnrolledTitle">已启用清单</sys:String>
-    <sys:String x:Key="LOCoffloaderSetManageEnrolled">管理已启用清单…</sys:String>
+    <sys:String x:Key="LOCoffloaderSetEnrolledTitle">已关联游戏</sys:String>
+    <sys:String x:Key="LOCoffloaderSetManageEnrolled">管理已关联游戏…</sys:String>
     <sys:String x:Key="LOCoffloaderBrowseDialogTitle">选择 Offloader 远端仓库目录</sys:String>
     <sys:String x:Key="LOCoffloaderVerifyRootRequired">必须设置远端仓库目录，例如 \\NAS\games\Offloader 或 D:\GameArchive。</sys:String>
     <sys:String x:Key="LOCoffloaderVerifyRootAbsolute">远端仓库目录必须是绝对路径。</sys:String>
     <sys:String x:Key="LOCoffloaderVerifyRootInvalid">远端仓库目录不合法：{0}</sys:String>
 
-    <!-- 已启用清单弹窗 -->
-    <sys:String x:Key="LOCoffloaderListWindowTitle">Offloader：已启用清单</sys:String>
-    <sys:String x:Key="LOCoffloaderListStatusCount">已启用 {0} 个游戏</sys:String>
+    <!-- 已关联游戏清单弹窗 -->
+    <sys:String x:Key="LOCoffloaderListWindowTitle">Offloader：已关联游戏</sys:String>
+    <sys:String x:Key="LOCoffloaderListStatusCount">已关联 {0} 个游戏</sys:String>
     <sys:String x:Key="LOCoffloaderListStatusUnreachable">远端仓库不可达，已回退显示本机记录：{0}</sys:String>
     <sys:String x:Key="LOCoffloaderListRefresh">刷新</sys:String>
     <sys:String x:Key="LOCoffloaderListRefreshFailed">刷新清单失败：</sys:String>

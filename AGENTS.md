@@ -1,6 +1,8 @@
 # AGENTS.md — Offloader 项目交接文档
 
-> 第一份总结文档（2026-09-05，一期实施结束）。后续 agent 接手前请先读此文件。
+> 总结文档（首版 2026-09-05；2026-09-06 发布准备时更新）。后续 agent 接手前请先读此文件。
+>
+> **命名约定（发布时拍板）**：GitHub 仓库与本地目录名 = `playnite-offloader`；插件一切内部标识（extension.yaml 的 Name/Id、程序集名、`LOCoffloader*` key、菜单分区、日志前缀）**保持 Offloader 不变**。
 
 ## 1. 项目简介
 
@@ -9,9 +11,9 @@ Playnite 6 通用插件（GenericPlugin），给“不舍得删游戏但 SSD 吃
 - 按游戏**手动启用**同步，本地安装目录 → 远端仓库（HDD/NAS）。
 - 通关/长期不玩后可**释放本地**：整个删除本地目录，远端保留唯一副本，游戏标记为未安装。
 - 想玩时通过 Playnite 的**安装入口恢复**（从远端拉回）。
-- 无任何自动同步（防本地损坏污染远端）：所有写入远端都必须经右键菜单手动触发；`OnGameStopped` 自动推已于未上线前移除。
+- 无任何自动同步（防本地损坏污染远端）：所有事件处理器（`OnGameStarted`/`OnGameStopped` 等）全空；启用同步时会自动发起一次后台推送，此后一切写远端都必须经右键菜单手动触发。
 
-前身是 `example/playnite-nas-sync/` 里的两个 PowerShell 脚本（启动前拉取 / 启动后推送），行为（robocopy 参数、退出码判定）照抄它们。
+面向用户的完整说明（含 robocopy 参数表、冲突策略、断点续传）见 `README.md`（中英双语，以其为准）。
 
 ## 2. 目录结构
 
@@ -21,13 +23,16 @@ Playnite 6 通用插件（GenericPlugin），给“不舍得删游戏但 SSD 吃
 | `OffloaderInstallController.cs` | 自定义安装控制器（未安装游戏的“从 Offloader 仓库恢复”） |
 | `OffloaderSettings.cs` | 设置模型 + ViewModel（含 `VerifySettings` 校验） |
 | `OffloaderSettingsView.xaml(.cs)` | 设置页（远端路径+浏览按钮、已启用清单入口） |
+| `EnrolledGamesView.xaml(.cs)` | 已启用清单弹窗（计数/排序/安装状态列/移除） |
+| `Models/EnrolledGameEntry.cs` | 清单展示条目 |
 | `Models/GameSyncState.cs` | 单游戏状态（Enabled / LocalPath 快照 / LastPushUtc） |
 | `Models/SyncStateStore.cs` | 状态持久化（`states.json`，见 §5 踩坑） |
+| `Services/RobocopyPresets.cs` | **robocopy 参数唯一真相源**（三组预设，README 参数表同步自此处） |
 | `Services/RobocopySyncService.cs` | robocopy 封装（拉取/推送/远端校验） |
+| `README.md` | 中英双语用户文档（功能 + robocopy 专题） |
 | `extension.yaml` | 扩展清单（Id 含 GUID，后缀即实例标识） |
 | `Localization/en_US.xaml` | 英文基线文案（98 个 `LOCoffloader*` key，唯一真相源） |
 | `Localization/zh_CN.xaml` | 中文文案（key/占位符必须与 en_US 逐项对齐） |
-| `example/playnite-nas-sync/` | 旧版 ps1 实现，只读参考，不参与构建 |
 | `packages/PlayniteSDK.6.15.0/` | SDK（已提交，无需还原即可构建） |
 
 ## 3. 关键决策（一期已定，不用再问）
@@ -37,7 +42,7 @@ Playnite 6 通用插件（GenericPlugin），给“不舍得删游戏但 SSD 吃
 3. 不要全局白名单——手动“启用同步”本身就是白名单。
 4. 无自动推/拉：`OnGameStopped` 自动推已移除，不再提供 `EnableAutoPushOnStopped` 开关。
 5. 不拦截启动，用 `GetInstallActions` 介入未安装游戏的安装流程。
-6. robocopy 参数沿用脚本版：拉取 `/E /R:2 /W:5 /MT:16`，推送 `/E /XO /IPG:50 /R:1 /W:3 /NP /NDL`（永不删远端，禁用 `/MIR`）。
+6. robocopy 参数以 `RobocopyPresets.cs` 为准（旧脚本的 `/IPG:50` 已废弃：`/IPG` 与 `/MT` 互斥，同用直接退出码 16）：拉取 `/E /R:2 /W:5 /MT:16`；前台推 `/E /XO /R:1 /W:3 /MT:16 /NDL`（故意无 `/NP`，逐文件 % 行驱动实时进度）；后台推 `/E /XO /R:1 /W:3 /MT:8 /NP /NDL` + `BelowNormal` 优先级。永不删远端，禁用 `/MIR`。
 
 ## 4. 构建与安装
 
@@ -58,6 +63,7 @@ Playnite 6 通用插件（GenericPlugin），给“不舍得删游戏但 SSD 吃
 4. **主菜单项放不进「附加组件」下。** 桌面端 `MainMenuItem` 只能落汉堡顶级（写分组名成子菜单，不写名单项直摆）。一期结论：不提供主菜单入口，设置只走扩展管理器。一期曾加过又删掉，见 git 历史。
 5. **bash 里跑 powershell 时 `$_` 会被 bash 展开**，涉及 `$` 的命令一律写成 `.ps1` 文件再 `-File` 执行，用完即删。
 6. `robocopy` 成功判定是 **`ExitCode < 8`**（0–7 都是成功），不要按 0 判断。
+7. **`/XO` 的半截文件陷阱（发布前实测确认）**：推送中途被杀会留下时间戳新于源文件的半截目标文件，此后每次 `/XO` 推送都会跳过它，远端静默残留损坏文件。拉取方向无 `/XO` 不受影响。未用 `/Z`（局域网收益小、拉低吞吐），已在 README 如实记录，不要当 bug 修。
 
 ## 6. 本地化约定（二期首轮已落地，新 UI 文本必须遵守）
 
