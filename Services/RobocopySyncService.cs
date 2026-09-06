@@ -53,8 +53,8 @@ namespace Offloader.Services
                 throw new DirectoryNotFoundException("远端仓库不存在：" + remotePath);
             }
             Directory.CreateDirectory(localPath);
-            // 拉取恒为前台（用户在等着玩），正常优先级，不限速
-            return Run(remotePath, localPath, extraArgs, cancelToken, false, onProgress);
+            // 拉取恒为前台多线程全速，仅进程优先级让行（BelowNormal 让 CPU，不降吞吐）
+            return Run(remotePath, localPath, extraArgs, cancelToken, true, onProgress);
         }
 
         public RobocopyResult Push(string localPath, string remotePath, CancellationToken cancelToken, string extraArgs, bool lowPriority, Action<string> onProgress = null)

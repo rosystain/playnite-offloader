@@ -14,15 +14,9 @@ namespace Offloader
     {
         private string remoteRoot = string.Empty;
         private bool enableAutoPushOnStopped = false;
-        private int pullSpeed = 2;
-        private int pushSpeed = 2;
 
         public string RemoteRoot { get => remoteRoot; set => SetValue(ref remoteRoot, value); }
         public bool EnableAutoPushOnStopped { get => enableAutoPushOnStopped; set => SetValue(ref enableAutoPushOnStopped, value); }
-        /// <summary>0=低，1=中，2=高（默认高）。XAML 绑 SelectedIndex。</summary>
-        public int PullSpeed { get => pullSpeed; set => SetValue(ref pullSpeed, value); }
-        /// <summary>0=低，1=中，2=高（默认高）。前台全速跑该档，后台自动加 /IPG:50 限速。</summary>
-        public int PushSpeed { get => pushSpeed; set => SetValue(ref pushSpeed, value); }
     }
 
     public class OffloaderSettingsViewModel : ObservableObject, ISettings
@@ -66,14 +60,6 @@ namespace Offloader
             if (Settings != null)
             {
                 Settings.RemoteRoot = (Settings.RemoteRoot ?? string.Empty).Trim().TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                if (Settings.PullSpeed < 0 || Settings.PullSpeed > 2)
-                {
-                    Settings.PullSpeed = 2;
-                }
-                if (Settings.PushSpeed < 0 || Settings.PushSpeed > 2)
-                {
-                    Settings.PushSpeed = 2;
-                }
             }
             plugin.SavePluginSettings(Settings);
         }

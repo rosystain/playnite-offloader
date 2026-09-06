@@ -151,7 +151,7 @@ namespace Offloader
                     try
                     {
                         var remote = SyncStateStore.GetRemotePath(CurrentSettings.RemoteRoot, gameId);
-                        var bgPushArgs = RobocopyPresets.GetBackgroundPushArgs(CurrentSettings.PushSpeed);
+                        var bgPushArgs = RobocopyPresets.GetBackgroundPushArgs();
                         var res = sync.Push(local, remote, CancellationToken.None, bgPushArgs, true);
                         if (res.Success)
                         {
@@ -210,7 +210,7 @@ namespace Offloader
                 PlayniteApi.Dialogs.ShowErrorMessage("没有可推送的游戏：需已启用同步（远端存在 GameId 目录）、已安装且本地目录存在。");
                 return;
             }
-            var fgArgs = RobocopyPresets.GetForegroundPushArgs(CurrentSettings.PushSpeed);
+            var fgArgs = RobocopyPresets.GetForegroundPushArgs();
             PlayniteApi.Dialogs.ActivateGlobalProgress(async progress =>
             {
                 foreach (var g in targets)
@@ -275,7 +275,7 @@ namespace Offloader
             {
                 return;
             }
-            var offloadArgs = RobocopyPresets.GetForegroundPushArgs(CurrentSettings.PushSpeed);
+            var offloadArgs = RobocopyPresets.GetForegroundPushArgs();
             PlayniteApi.Dialogs.ActivateGlobalProgress(async progress =>
             {
                 foreach (var g in targets)
@@ -516,7 +516,7 @@ namespace Offloader
             {
                 throw new InvalidOperationException("恢复目标路径为空，为防止误写已中止。");
             }
-            var pullArgs = RobocopyPresets.GetPullArgs(CurrentSettings.PullSpeed);
+            var pullArgs = RobocopyPresets.GetPullArgs();
             var remote = SyncStateStore.GetRemotePath(CurrentSettings.RemoteRoot, game.Id);
             if (!sync.RemoteHasData(remote))
             {
@@ -567,7 +567,7 @@ namespace Offloader
                 PlayniteApi.Dialogs.ShowErrorMessage("没有可推送的游戏：需已安装且本地目录存在。");
                 return;
             }
-            var bgArgs = RobocopyPresets.GetBackgroundPushArgs(CurrentSettings.PushSpeed);
+            var bgArgs = RobocopyPresets.GetBackgroundPushArgs();
             foreach (var g in targets)
             {
                 var gate = gameLocks.GetOrAdd(g.Id, _ => new SemaphoreSlim(1, 1));
