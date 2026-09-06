@@ -1,7 +1,7 @@
 ﻿# update-manifest.ps1 - 将 GitHub Release 信息转换为 manifest.yaml 首条（版本一致性/资产命名/Changelog 抽取全在此校验）
 # 由 .github/workflows/publish-manifest.yml 在 release published/edited 时调用；也支持本地手调排障。
 # 约定（见 AGENTS.md §4）：
-#   - Release 正文的顶层 "- " bullet 逐条即 manifest Changelog（代码块内除外）；
+#   - Release 正文的顶层 "- " bullet 逐条即 manifest Changelog（代码块内除外；正文为空则省略 Changelog 键）；
 #   - 资产文件名必须等于 {Id}_{Version点→下划线}.pext；
 #   - 同版本重发（edited）= 整条替换，不产生重复条目；
 #   - 本脚本只动首条所在版本，其余条目原样保留。
@@ -10,7 +10,7 @@
 param(
     [Parameter(Mandatory)][string]$Tag,                       # 形如 v1.2
     [Parameter(Mandatory)][string]$AssetUrl,                  # pext 资产的 browser_download_url
-    [Parameter(Mandatory)][string]$Body,                      # Release 正文（Changelog 来源）
+    [string]$Body = '',                                        # Release 正文（Changelog 来源；可为空=本条不写 Changelog）
     [string]$ReleaseDate = '',                                # 接受完整 ISO（取日期段）；空则用 UTC 今日
     [string]$RequiredApiVersion = '6.14.0',                   # 与 release.ps1 同一真相源约定，上调需同步
     [string]$ManifestPath = 'manifest.yaml',
@@ -37,7 +37,9 @@ foreach ($l in ($Body -split "\r?\n")) {
     if ($inFence) { continue }
     if ($l -match '^[-*]\s+(.+?)\s*$') { $changelog += $Matches[1] }
 }
-if ($changelog.Count -lt 1) { Fail 'Release 正文无顶层 "- " bullet（Changelog 抽取契约：顶层 bullet 逐条进清单）' }
+if ($changelog.Count -lt 1) {
+    Write-Warning 'Release 正文为空或无顶层 "- " bullet，本条暂不写 Changelog；之后在 Release 编辑正文保存（edited 事件）会整条替换补上'
+}
 
 # ---------- 3. extension.yaml 交叉校验（可得则校） ----------
 $extId = $null
@@ -61,9 +63,12 @@ $entry = @(
     "  - Version: $ver",
     "    RequiredApiVersion: $RequiredApiVersion",
     "    ReleaseDate: $ReleaseDate",
-    "    PackageUrl: $AssetUrl",
-    "    Changelog:"
-) + @($changelog | ForEach-Object { "      - $_" })
+    "    PackageUrl: $AssetUrl"
+)
+if ($changelog.Count) {
+    $entry += '    Changelog:'
+    $entry += @($changelog | ForEach-Object { "      - $_" })
+}
 
 if (Test-Path $ManifestPath) {
     $lines = @(Get-Content $ManifestPath -Encoding UTF8)

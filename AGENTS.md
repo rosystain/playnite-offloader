@@ -3,6 +3,8 @@
 > 总结文档（首版 2026-09-05；2026-09-06 发布准备时更新）。后续 agent 接手前请先读此文件。
 >
 > **命名约定（发布时拍板）**：GitHub 仓库与本地目录名 = `playnite-offloader`；插件一切内部标识（extension.yaml 的 Name/Id、程序集名、`LOCoffloader*` key、菜单分区、日志前缀）**保持 Offloader 不变**。
+>
+> **提交约定**：commit message 一律用**英文**书写（summary 与 body 都不得用中文），禁止混入中文 commit。
 
 ## 1. 项目简介
 
