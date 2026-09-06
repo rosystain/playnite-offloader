@@ -78,7 +78,7 @@ msbuild Offloader.csproj /p:Configuration=Release
 
 Offloader 为纯本地工具，不包含任何外网连接或遥测。插件运行状态（游戏映射 ID、本地路径快照及推送时间戳）均存储于 Playnite 扩展目录下的 `states.json`。
 
-## English Documentation
+## Documentation
 
 **Offloader** is a cold-storage archiving extension designed for [Playnite](https://playnite.link/). When SSD storage is constrained, Offloader allows you to safely migrate space-consuming games to secondary HDD or NAS storage while preserving full library metadata. Games can be restored at any time via Playnite's native installation workflow.
 
