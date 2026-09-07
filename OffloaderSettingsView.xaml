@@ -9,13 +9,13 @@
         <StackPanel Margin="8">
             <TextBlock Text="{DynamicResource LOCoffloaderSetRemoteRootLabel}" FontWeight="Bold"/>
             <DockPanel Margin="0,4,0,0">
-                <Button Content="{DynamicResource LOCoffloaderSetBrowse}" Width="70" DockPanel.Dock="Right" Margin="6,0,0,0" Click="BrowseButton_Click"/>
+                <Button Content="{DynamicResource LOCoffloaderSetBrowse}" MinWidth="70" DockPanel.Dock="Right" Margin="6,0,0,0" Click="BrowseButton_Click"/>
                 <TextBox Text="{Binding Settings.RemoteRoot, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center"
                          ToolTip="{DynamicResource LOCoffloaderSetRemoteRootTooltip}"/>
             </DockPanel>
 
             <TextBlock Text="{DynamicResource LOCoffloaderSetEnrolledTitle}" FontWeight="Bold" Margin="0,12,0,0"/>
-            <Button Content="{DynamicResource LOCoffloaderSetManageEnrolled}" Width="150" HorizontalAlignment="Left" Margin="0,4,0,0" Click="OpenEnrolled_Click"/>
+            <Button Content="{DynamicResource LOCoffloaderSetManageEnrolled}" MinWidth="150" HorizontalAlignment="Left" Margin="0,4,0,0" Click="OpenEnrolled_Click"/>
         </StackPanel>
     </ScrollViewer>
 </UserControl>
