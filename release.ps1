@@ -49,7 +49,7 @@ if ($repoPath) {
     if ($remoteTag) {
         Fail "远端 tag $tagName 已存在（版本号需 bump，或去网页端重发该 Release 以刷新 manifest）"
     }
-    $draftUrl = "https://github.com/$repoPath/releases/new?tag=$tagName&title=" + [uri]::EscapeDataString("Offloader $extVer")
+    $draftUrl = "https://github.com/$repoPath/releases/new?tag=$tagName&title=" + [uri]::EscapeDataString("v$extVer")
 } else {
     Write-Warning 'origin 未配置（非 GitHub？），跳过 HEAD/远端 tag 校验，稍后需手动复制草稿页地址'
     $draftUrl = ''
