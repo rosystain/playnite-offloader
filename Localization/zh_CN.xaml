@@ -29,6 +29,7 @@
     <sys:String x:Key="LOCoffloaderProgPushing">正在推送：{0}</sys:String>
     <sys:String x:Key="LOCoffloaderProgOffloadCaption">Offloader 释放中…</sys:String>
     <sys:String x:Key="LOCoffloaderProgFinalPush">最终推送：{0}</sys:String>
+    <sys:String x:Key="LOCoffloaderProgVerifyPassed">校验通过：{0}</sys:String>
     <sys:String x:Key="LOCoffloaderProgDeleting">删除本地文件：{0}</sys:String>
     <sys:String x:Key="LOCoffloaderProgRestoreCaption">Offloader 恢复中：{0}</sys:String>
     <sys:String x:Key="LOCoffloaderProgRestoring">正在恢复：{0}</sys:String>
@@ -36,7 +37,7 @@
     <!-- 对话框（多行文本由代码以 \n 拼接，资源保持单行） -->
     <sys:String x:Key="LOCoffloaderDlgOffloadCaption">Offloader：释放确认</sys:String>
     <sys:String x:Key="LOCoffloaderDlgOffloadHead">确定释放以下 {0} 个游戏的本地文件吗？</sys:String>
-    <sys:String x:Key="LOCoffloaderDlgOffloadNote">将先执行最终推送并校验远端，校验通过后才会删除本地整个目录，并将游戏标记为未安装。</sys:String>
+    <sys:String x:Key="LOCoffloaderDlgOffloadNote">将先执行最终推送并校验远端，确认本地每个文件在远端都存在且大小一致后，才会删除本地整个目录，并将游戏标记为未安装。远端可能残留多余文件，恢复时会一并拉回。</sys:String>
     <sys:String x:Key="LOCoffloaderDlgRestoreCaption">Offloader：恢复确认</sys:String>
     <sys:String x:Key="LOCoffloaderDlgRestoreHead">确定从 Offloader 仓库恢复以下游戏吗？</sys:String>
     <sys:String x:Key="LOCoffloaderDlgRestoreNote">恢复将占用本地磁盘，完成后游戏将标记为已安装。</sys:String>
@@ -45,6 +46,7 @@
     <sys:String x:Key="LOCoffloaderFmtRemoteData">远端数据：{0}</sys:String>
     <sys:String x:Key="LOCoffloaderFmtRestoreTo">恢复到：{0}</sys:String>
     <sys:String x:Key="LOCoffloaderRemoteStats">{0} 个文件，共 {1}</sys:String>
+    <sys:String x:Key="LOCoffloaderFmtMismatchSamples">不一致文件：{0}</sys:String>
     <sys:String x:Key="LOCoffloaderFmtNamedError">{0}：{1}</sys:String>
     <sys:String x:Key="LOCoffloaderRemoteStatsUnavailable">远端统计不可用（仍可继续）。</sys:String>
 
@@ -56,6 +58,9 @@
     <sys:String x:Key="LOCoffloaderErrRobocopyExit">robocopy 退出码 {0}（≥8 为失败）。{1}</sys:String>
     <sys:String x:Key="LOCoffloaderErrFinalPushFailed">最终推送失败（robocopy 退出码 {0}），未删除本地文件。{1}</sys:String>
     <sys:String x:Key="LOCoffloaderErrRemoteVerify">远端校验未通过（远端为空或不可达），未删除本地文件。</sys:String>
+    <sys:String x:Key="LOCoffloaderErrRemoteMismatch">远端有 {0} 个文件缺失或大小不一致，未删除本地文件。{1}</sys:String>
+    <sys:String x:Key="LOCoffloaderMismatchHint">若之前有推送被打断，远端半截文件可能比本地新、被 /XO 跳过。请在远端删除不一致的文件并重新推送，然后再试释放。</sys:String>
+    <sys:String x:Key="LOCoffloaderErrInsufficientSpace">恢复目标磁盘空间不足。约需 {0}，可用 {1}。</sys:String>
     <sys:String x:Key="LOCoffloaderErrLocalPathEmpty">本地路径为空，已中止以防误删。</sys:String>
     <sys:String x:Key="LOCoffloaderErrNoRemoteRoot">未设置远端仓库目录。</sys:String>
     <sys:String x:Key="LOCoffloaderErrNoRemoteData">远端仓库无此游戏数据：{0}</sys:String>

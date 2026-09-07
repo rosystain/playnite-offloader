@@ -29,6 +29,7 @@
     <sys:String x:Key="LOCoffloaderProgPushing">Pushing: {0}</sys:String>
     <sys:String x:Key="LOCoffloaderProgOffloadCaption">Offloader: offloading…</sys:String>
     <sys:String x:Key="LOCoffloaderProgFinalPush">Final push: {0}</sys:String>
+    <sys:String x:Key="LOCoffloaderProgVerifyPassed">Verification passed: {0}</sys:String>
     <sys:String x:Key="LOCoffloaderProgDeleting">Deleting local files: {0}</sys:String>
     <sys:String x:Key="LOCoffloaderProgRestoreCaption">Offloader: restoring {0}</sys:String>
     <sys:String x:Key="LOCoffloaderProgRestoring">Restoring: {0}</sys:String>
@@ -36,7 +37,7 @@
     <!-- 对话框（多行文本由代码以 \n 拼接，资源保持单行） -->
     <sys:String x:Key="LOCoffloaderDlgOffloadCaption">Offloader: confirm offload</sys:String>
     <sys:String x:Key="LOCoffloaderDlgOffloadHead">Free local files for the following {0} game(s)?</sys:String>
-    <sys:String x:Key="LOCoffloaderDlgOffloadNote">Offloader will do a final push and verify the remote copy first; the local folder is deleted only after verification passes, and the game is marked as not installed.</sys:String>
+    <sys:String x:Key="LOCoffloaderDlgOffloadNote">Offloader will do a final push and verify the remote copy first; the local folder is deleted only after every local file is confirmed unchanged on the remote. Extraneous files may remain on the remote and will be pulled back on restore.</sys:String>
     <sys:String x:Key="LOCoffloaderDlgRestoreCaption">Offloader: confirm restore</sys:String>
     <sys:String x:Key="LOCoffloaderDlgRestoreHead">Restore the following game from the Offloader repository?</sys:String>
     <sys:String x:Key="LOCoffloaderDlgRestoreNote">Restoring occupies local disk space; the game will be marked as installed when done.</sys:String>
@@ -45,6 +46,7 @@
     <sys:String x:Key="LOCoffloaderFmtRemoteData">Remote data: {0}</sys:String>
     <sys:String x:Key="LOCoffloaderFmtRestoreTo">Restore to: {0}</sys:String>
     <sys:String x:Key="LOCoffloaderRemoteStats">{0} file(s), {1}</sys:String>
+    <sys:String x:Key="LOCoffloaderFmtMismatchSamples">Mismatched files: {0}</sys:String>
     <sys:String x:Key="LOCoffloaderFmtNamedError">{0}: {1}</sys:String>
     <sys:String x:Key="LOCoffloaderRemoteStatsUnavailable">Remote statistics unavailable (you can still continue).</sys:String>
 
@@ -56,6 +58,9 @@
     <sys:String x:Key="LOCoffloaderErrRobocopyExit">robocopy exit code {0} (8 or higher means failure).{1}</sys:String>
     <sys:String x:Key="LOCoffloaderErrFinalPushFailed">Final push failed (robocopy exit code {0}); local files were kept.{1}</sys:String>
     <sys:String x:Key="LOCoffloaderErrRemoteVerify">Remote verification failed (remote folder empty or unreachable); local files were kept.</sys:String>
+    <sys:String x:Key="LOCoffloaderErrRemoteMismatch">Remote copy is missing or has a different size for {0} file(s); local files were kept.{1}</sys:String>
+    <sys:String x:Key="LOCoffloaderMismatchHint">If an earlier push was interrupted, partial files on the remote may be newer than the local ones and are skipped by /XO. Delete the mismatched files on the remote, push again, then retry offloading.</sys:String>
+    <sys:String x:Key="LOCoffloaderErrInsufficientSpace">Not enough free disk space on the restore target. Requires about {0}, available {1}.</sys:String>
     <sys:String x:Key="LOCoffloaderErrLocalPathEmpty">Local path is empty; aborted to prevent accidental deletion.</sys:String>
     <sys:String x:Key="LOCoffloaderErrNoRemoteRoot">Remote repository folder is not set.</sys:String>
     <sys:String x:Key="LOCoffloaderErrNoRemoteData">No remote data for this game: {0}</sys:String>

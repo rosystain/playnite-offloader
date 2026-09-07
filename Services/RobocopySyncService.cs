@@ -1,5 +1,6 @@
 using Playnite.SDK;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -110,19 +111,20 @@ namespace Offloader.Services
         }
 
         /// <summary>
-        /// 统计远端文件数与总字节数（供恢复确认框展示）。失败返回 false，调用方显示兜底文案仍可继续。
+        /// 统计目录内文件数与总字节数（本地/远端通用）。失败返回 false，调用方显示兜底文案仍可继续。
+        /// 用于释放确认框的本地↔远端比对展示、恢复空间预检。
         /// </summary>
-        public bool TryGetRemoteStats(string remotePath, out long fileCount, out long totalBytes)
+        public bool TryGetTreeStats(string path, out long fileCount, out long totalBytes)
         {
             fileCount = 0;
             totalBytes = 0;
             try
             {
-                if (string.IsNullOrWhiteSpace(remotePath) || !Directory.Exists(remotePath))
+                if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
                 {
                     return false;
                 }
-                foreach (var file in Directory.EnumerateFiles(remotePath, "*", SearchOption.AllDirectories))
+                foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
                 {
                     try
                     {
@@ -137,7 +139,84 @@ namespace Offloader.Services
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "Offloader: 统计远端数据失败：" + remotePath);
+                logger.Error(ex, "Offloader: 统计目录数据失败：" + path);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 构建 相对路径→文件大小 映射（本地/远端通用，忽略大小写）。失败返回 false。
+        /// 供释放前逐文件校验：远端必须包含本地每个文件且大小一致；远端多余文件放行
+        /// （与「永不删除远端」约定一致，归档天然积累 extras）。
+        /// </summary>
+        public bool TryGetFileMap(string path, out Dictionary<string, long> fileMap)
+        {
+            fileMap = null;
+            try
+            {
+                if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+                {
+                    return false;
+                }
+                var root = path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                var map = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+                foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                {
+                    try
+                    {
+                        map[file.Substring(root.Length)] = new FileInfo(file).Length;
+                    }
+                    catch
+                    {
+                    }
+                }
+                fileMap = map;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Offloader: 构建文件映射失败：" + path);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 统计远端文件数与总字节数（供恢复确认框展示）。委托 <see cref="TryGetTreeStats"/>。
+        /// </summary>
+        public bool TryGetRemoteStats(string remotePath, out long fileCount, out long totalBytes)
+        {
+            return TryGetTreeStats(remotePath, out fileCount, out totalBytes);
+        }
+
+        /// <summary>
+        /// 查询目标路径所在驱动器的剩余可用字节数。仅支持本地盘/映射盘符；
+        /// UNC 共享（\server\share）DriveInfo 不支持，返回 false（调用方据此放行预检）。
+        /// </summary>
+        public bool TryGetFreeBytes(string path, out long freeBytes)
+        {
+            freeBytes = 0;
+            try
+            {
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    return false;
+                }
+                var root = Path.GetPathRoot(path);
+                if (string.IsNullOrWhiteSpace(root))
+                {
+                    return false;
+                }
+                var di = new DriveInfo(root);
+                if (!di.IsReady)
+                {
+                    return false;
+                }
+                freeBytes = di.AvailableFreeSpace;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.Debug(ex, "Offloader: 查询可用空间失败：" + path);
                 return false;
             }
         }

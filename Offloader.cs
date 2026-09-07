@@ -256,6 +256,38 @@ namespace Offloader
                         {
                             throw new InvalidOperationException(ResourceProvider.GetString("LOCoffloaderErrRemoteVerify"));
                         }
+                        // 终推后硬校验：远端必须包含本地每个文件且大小一致才算通过（逐文件校验）。
+                        // 远端多余文件放行（与「永不删除远端」约定一致，归档天然积累 extras）；
+                        // 任一侧映射失败时不硬拦（避免把统计抖动误判为校验失败锁死释放），仅记录告警。
+                        Dictionary<string, long> localMap = null, remoteMap = null;
+                        var lok = !string.IsNullOrWhiteSpace(local) && sync.TryGetFileMap(local, out localMap);
+                        var rok = sync.TryGetFileMap(remote, out remoteMap);
+                        var mismatched = (lok && rok)
+                            ? localMap.Where(kv => !remoteMap.TryGetValue(kv.Key, out var rs) || rs != kv.Value).Select(kv => kv.Key).ToList()
+                            : null;
+                        if (mismatched != null && mismatched.Count > 0)
+                        {
+                            var samples = string.Join(", ", mismatched.Take(5)) + (mismatched.Count > 5 ? ", …" : "");
+                            var detail = "\n" + string.Format(ResourceProvider.GetString("LOCoffloaderFmtMismatchSamples"), samples)
+                                + "\n" + ResourceProvider.GetString("LOCoffloaderMismatchHint");
+                            throw new InvalidOperationException(string.Format(ResourceProvider.GetString("LOCoffloaderErrRemoteMismatch"), mismatched.Count, detail));
+                        }
+                        if (!lok || !rok)
+                        {
+                            logger.Warn($"Offloader: {g.Name} 释放前完整性映射失败（本地可用={lok}，远端可用={rok}），已放行。");
+                        }
+                        // 校验通过：用已构建的映射数据（零额外扫描）展示确认信息
+                        if (lok && rok)
+                        {
+                            long verifiedBytes = 0;
+                            foreach (var kv in localMap)
+                            {
+                                verifiedBytes += kv.Value;
+                            }
+                            progress.Text = string.Format(
+                                ResourceProvider.GetString("LOCoffloaderProgVerifyPassed"),
+                                string.Format(ResourceProvider.GetString("LOCoffloaderRemoteStats"), localMap.Count, FormatBytes(verifiedBytes)));
+                        }
                         progress.Text = string.Format(ResourceProvider.GetString("LOCoffloaderProgDeleting"), g.Name);
                         if (Directory.Exists(local))
                         {
@@ -473,6 +505,18 @@ namespace Offloader
             if (!sync.RemoteHasData(remote))
             {
                 throw new DirectoryNotFoundException(string.Format(ResourceProvider.GetString("LOCoffloaderErrNoRemoteData"), remote));
+            }
+            // 恢复前目标盘空间预检（硬拦截；取不到空间信息时放行）
+            long remoteBytes, remoteFiles;
+            if (sync.TryGetTreeStats(remote, out remoteFiles, out remoteBytes))
+            {
+                long free;
+                if (sync.TryGetFreeBytes(target, out free) && remoteBytes > free)
+                {
+                    throw new InvalidOperationException(string.Format(
+                        ResourceProvider.GetString("LOCoffloaderErrInsufficientSpace"),
+                        FormatBytes(remoteBytes), FormatBytes(free)));
+                }
             }
             var gate = gameLocks.GetOrAdd(game.Id, _ => new SemaphoreSlim(1, 1));
             gate.Wait(progress?.CancelToken ?? CancellationToken.None);
