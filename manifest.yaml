@@ -5,7 +5,7 @@ Packages:
     ReleaseDate: 2026-09-07
     PackageUrl: https://github.com/rosystain/playnite-offloader/releases/download/v1.0.2/Offloader_5180751b-c8af-41cf-b9de-76253984e71c_1_0_2.pext
     Changelog:
-      - feat(offload): verify remote integrity per-file before freeing local space
+      - 'feat(offload): verify remote integrity per-file before freeing local space'
   - Version: 1.0.1
     RequiredApiVersion: 6.14.0
     ReleaseDate: 2026-09-07
@@ -16,3 +16,6 @@ Packages:
     RequiredApiVersion: 6.14.0
     ReleaseDate: 2026-09-06
     PackageUrl: https://github.com/rosystain/playnite-offloader/releases/download/v1.0/Offloader_5180751b-c8af-41cf-b9de-76253984e71c_1_0.pext
+    Changelog:
+      - Init
+

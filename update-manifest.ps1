@@ -1,7 +1,7 @@
 ﻿# update-manifest.ps1 - 将 GitHub Release 信息转换为 manifest.yaml 首条（版本一致性/资产命名/Changelog 抽取全在此校验）
 # 由 .github/workflows/publish-manifest.yml 在 release published/edited 时调用；也支持本地手调排障。
 # 约定（见 AGENTS.md §4）：
-#   - Release 正文的顶层 "- " bullet 逐条即 manifest Changelog（代码块内除外；正文为空则省略 Changelog 键）；
+#   - Release 正文的顶层 "- " bullet 逐条即 manifest Changelog（代码块内除外；正文为空则省略 Changelog 键；写回时统一单引号包裹，防 ": " 被 YAML 解析为 mapping）；
 #   - 资产文件名必须等于 {Id}_{Version点→下划线}.pext；
 #   - 同版本重发（edited）= 整条替换，不产生重复条目；
 #   - 本脚本只动首条所在版本，其余条目原样保留。
@@ -67,7 +67,9 @@ $entry = @(
 )
 if ($changelog.Count) {
     $entry += '    Changelog:'
-    $entry += @($changelog | ForEach-Object { "      - $_" })
+    # Changelog 逐条单引号包裹（内嵌单引号双写转义）：裸写含 ": " 的文本会被 YAML 解析为 mapping，
+    # 导致 Toolbox/Playnite 反序列化失败（实测 Line 8 Col 9 deserialization 错误）
+    $entry += @($changelog | ForEach-Object { "      - '" + ($_.Replace("'", "''")) + "'" })
 }
 
 if (Test-Path $ManifestPath) {
